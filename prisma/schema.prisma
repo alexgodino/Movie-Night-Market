@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MovieNightStatus {
+  DRAFT
+  VOTING_OPEN
+  VOTING_CLOSED
+  WINNER_REVEALED
+  POST_WATCH_OPEN
+  ARCHIVED
+}
+
+model Movie {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  title          String
+  year           Int
+  runtimeMinutes Int
+  genres         String
+  synopsis       String
+  posterUrl      String?
+  sourceFilename String
+  sourcePath     String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  options        MovieNightOption[]
+  winnerNights   MovieNight[]      @relation("WinnerMovie")
+}
+
+model MovieNight {
+  id                String             @id @default(cuid())
+  title             String
+  slug              String             @unique
+  status            MovieNightStatus   @default(DRAFT)
+  openedVotingAt    DateTime?
+  closedVotingAt    DateTime?
+  winnerRevealedAt  DateTime?
+  postWatchOpenedAt DateTime?
+  archivedAt        DateTime?
+  winnerMovieId     String?
+  votingEndsAt      DateTime?
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  winnerMovie       Movie?             @relation("WinnerMovie", fields: [winnerMovieId], references: [id])
+  options           MovieNightOption[]
+  preWatchVotes     PreWatchVote[]
+  postWatchRatings  PostWatchRating[]
+}
+
+model MovieNightOption {
+  id               String             @id @default(cuid())
+  movieNightId     String
+  movieId          String
+  position         Int
+  marketScore      Float              @default(0)
+  debugSummary     String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  movieNight       MovieNight         @relation(fields: [movieNightId], references: [id], onDelete: Cascade)
+  movie            Movie              @relation(fields: [movieId], references: [id])
+  preWatchVoteItems PreWatchVoteItem[]
+
+  @@unique([movieNightId, movieId])
+  @@unique([movieNightId, position])
+}
+
+model DeviceIdentity {
+  id               String            @id @default(cuid())
+  deviceKey        String            @unique
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  lastSeenAt       DateTime          @default(now())
+  preWatchVotes    PreWatchVote[]
+  postWatchRatings PostWatchRating[]
+}
+
+model PreWatchVote {
+  id               String             @id @default(cuid())
+  movieNightId     String
+  deviceIdentityId String
+  ballotMean       Float
+  ballotSpread     Float
+  adjustmentFactor Float
+  createdAt        DateTime           @default(now())
+  movieNight       MovieNight         @relation(fields: [movieNightId], references: [id], onDelete: Cascade)
+  deviceIdentity   DeviceIdentity     @relation(fields: [deviceIdentityId], references: [id], onDelete: Cascade)
+  items            PreWatchVoteItem[]
+
+  @@unique([movieNightId, deviceIdentityId])
+}
+
+model PreWatchVoteItem {
+  id                String           @id @default(cuid())
+  preWatchVoteId    String
+  movieNightOptionId String
+  rating            Int
+  adjustedRating    Float
+  createdAt         DateTime         @default(now())
+  preWatchVote      PreWatchVote     @relation(fields: [preWatchVoteId], references: [id], onDelete: Cascade)
+  movieNightOption  MovieNightOption @relation(fields: [movieNightOptionId], references: [id], onDelete: Cascade)
+}
+
+model PostWatchRating {
+  id               String         @id @default(cuid())
+  movieNightId     String
+  deviceIdentityId String
+  ratingValue      Float
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  movieNight       MovieNight     @relation(fields: [movieNightId], references: [id], onDelete: Cascade)
+  deviceIdentity   DeviceIdentity @relation(fields: [deviceIdentityId], references: [id], onDelete: Cascade)
+
+  @@unique([movieNightId, deviceIdentityId])
+}

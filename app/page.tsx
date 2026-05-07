@@ -1,65 +1,163 @@
-import Image from "next/image";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CheckCircle2, Star, Vote } from "lucide-react";
+import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
+import { getLastArchivedNightSummary, getViewerState } from "@/lib/queries";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+type Props = {
+  searchParams: Promise<{
+    prevRated?: string;
+  }>;
+};
+
+export default async function HomePage({ searchParams }: Props) {
+  const params = await searchParams;
+  const deviceId = await getDeviceIdFromCookie();
+  await touchDeviceIdentity(deviceId);
+  const { activeNight, hasVoted, hasRatedWinner } = await getViewerState(deviceId);
+  const lastNight = await getLastArchivedNightSummary();
+
+  if (!activeNight) {
+    return (
+      <main className="app-shell flex items-center">
+        <section className="glass-panel w-full rounded-[2rem] p-6 text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+            Movie Night Market
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          <h1 className="headline mt-3 text-5xl">No active movie night yet</h1>
+          <p className="mt-4 text-lg leading-8 text-[var(--ink-2)]">
+            The lineup hasn&apos;t been posted. Once an admin creates tonight&apos;s five choices,
+            this screen turns into the family voting board.
+          </p>
+          {lastNight ? (
+            <div className="mt-6 rounded-[1.5rem] border border-[var(--line)] bg-white/80 p-4 text-left">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                Last time
+              </p>
+              <h2 className="headline mt-1 text-2xl text-[var(--ink-1)]">
+                {lastNight.winnerTitle}
+              </h2>
+              {lastNight.avgRating !== null ? (
+                <p className="mt-1 flex items-center gap-1.5 text-base text-[var(--ink-2)]">
+                  <Star className="size-4 fill-[var(--accent)] text-[var(--accent)]" />
+                  Average rating:{" "}
+                  <strong className="text-[var(--ink-1)]">{lastNight.avgRating.toFixed(1)}</strong>
+                </p>
+              ) : (
+                <p className="mt-1 text-base text-[var(--ink-2)]">No post-watch ratings yet.</p>
+              )}
+            </div>
+          ) : null}
+          <Link
+            href="/admin/login"
+            className="tap-button mt-6 inline-flex items-center justify-center bg-[var(--surface-4)] px-6 text-white"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            Open admin tools
+          </Link>
+        </section>
       </main>
-    </div>
+    );
+  }
+
+  if (activeNight.status === "POST_WATCH_OPEN") {
+    if (!hasRatedWinner) {
+      redirect("/rate");
+    }
+
+    return (
+      <main className="app-shell flex items-center">
+        <section className="glass-panel w-full rounded-[2rem] p-8 text-center space-y-4">
+          <CheckCircle2 className="mx-auto size-12 text-[var(--market-up)]" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+              All done
+            </p>
+            <h1 className="headline mt-2 text-4xl text-[var(--ink-1)]">
+              You&apos;re all set for tonight.
+            </h1>
+          </div>
+          <p className="text-lg leading-8 text-[var(--ink-2)]">
+            Thanks for rating{" "}
+            <strong className="text-[var(--ink-1)]">
+              {activeNight.winnerMovie?.title ?? "tonight's pick"}
+            </strong>
+            . See you at the next movie night.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  const canStartVoting = activeNight.status === "VOTING_OPEN" && !hasVoted;
+
+  return (
+    <main className="app-shell space-y-5 pb-10">
+      {params.prevRated ? (
+        <section className="section-card rounded-[2rem] border border-emerald-200 bg-emerald-50/60 p-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="size-5 shrink-0 text-[var(--market-up)]" />
+            <p className="text-sm font-semibold text-[var(--ink-1)]">
+              Last night&apos;s rating saved. Thanks!
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="glass-panel rounded-[2rem] p-8 text-center space-y-5">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+            Movie Night Market
+          </p>
+          <h1 className="headline mt-3 text-5xl leading-none text-[var(--ink-1)]">
+            Ready to vote?
+          </h1>
+        </div>
+
+        <p className="text-lg leading-8 text-[var(--ink-2)]">
+          {canStartVoting
+            ? "Tonight's five picks are ready. Rate them all from 1 to 5 and the live leaderboard unlocks once your ballot is in."
+            : hasVoted
+              ? "Your ballot is in. Follow the live leaderboard to see how the group rankings move."
+              : "Voting is not open right now. Check back once the admin opens tonight's ballot."}
+        </p>
+
+        {lastNight ? (
+          <div className="rounded-[1.5rem] border border-[var(--line)] bg-white/85 p-4 text-left">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+              Last time
+            </p>
+            <h2 className="headline mt-1 text-2xl text-[var(--ink-1)]">
+              {lastNight.winnerTitle}
+            </h2>
+            {lastNight.avgRating !== null ? (
+              <p className="mt-1 flex items-center gap-1.5 text-base text-[var(--ink-2)]">
+                <Star className="size-4 fill-[var(--accent)] text-[var(--accent)]" />
+                Average rating:{" "}
+                <strong className="text-[var(--ink-1)]">{lastNight.avgRating.toFixed(1)}</strong>
+              </p>
+            ) : (
+              <p className="mt-1 text-base text-[var(--ink-2)]">No post-watch ratings yet.</p>
+            )}
+          </div>
+        ) : null}
+
+        {canStartVoting ? (
+          <Link
+            href="/vote"
+            className="tap-button inline-flex w-full items-center justify-center gap-2 bg-[var(--accent)] text-lg text-white"
+          >
+            <Vote className="size-5" />
+            Start voting
+          </Link>
+        ) : hasVoted ? (
+          <Link
+            href="/results"
+            className="tap-button inline-flex w-full items-center justify-center gap-2 bg-[var(--surface-4)] text-lg text-white"
+          >
+            View live results
+          </Link>
+        ) : null}
+      </section>
+    </main>
   );
 }

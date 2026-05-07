@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Movie Night Market
 
-## Getting Started
+Movie Night Market is a phone-first family voting app for choosing one movie from five manually entered options. It supports anonymous device voting, one ballot per device per movie night, live results, admin controls, manual poster URLs/uploads, and post-watch ratings.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- Prisma + SQLite
+- Server Actions for admin controls and vote/rating submission
+
+## Local Setup
 
 ```bash
+npm install
+cp .env.example .env
+npm run db:push
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000` on the computer. For phone testing on the same Wi-Fi, run:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev -- --hostname 0.0.0.0 --port 3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Then open `http://YOUR_COMPUTER_LAN_IP:3000` on the phone.
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+ADMIN_PASSCODE=popcorn
+DATABASE_URL="file:./dev.db"
+POSTER_UPLOAD_DIR="./public/uploads"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+For deployment with a persistent disk, use paths on that disk, for example:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+DATABASE_URL="file:/data/dev.db"
+POSTER_UPLOAD_DIR="/data/uploads"
+```
 
-## Deploy on Vercel
+## Deploy Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The current app uses SQLite and uploaded poster files. Deploy it to a Node host that can provide persistent disk storage, such as a Docker-based Render/Railway/Fly-style deployment. A purely serverless Vercel deployment is not recommended for this version because votes and uploaded posters need durable storage.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Docker support is included:
+
+```bash
+docker build -t movie-night-market .
+docker run -p 3000:3000 \
+  -e ADMIN_PASSCODE=change-me \
+  -e DATABASE_URL="file:/data/dev.db" \
+  -e POSTER_UPLOAD_DIR="/data/uploads" \
+  -v movie-night-data:/data \
+  movie-night-market
+```
+
+The deploy start command is:
+
+```bash
+npm run start:deploy
+```
+
+That runs `prisma db push` before `next start`.
+
+## Render Deployment
+
+**Requirements:** Render Starter plan or higher (persistent disk is not available on the free tier).
+
+### 1. Push the repo to GitHub
+
+Push this repository to a GitHub repo you own. If the `movie-night-market/` folder is a subdirectory inside the repo (not the root), note the path — you will need it in step 3.
+
+### 2. Create a new Web Service on Render
+
+1. Go to [render.com](https://render.com) → **New** → **Web Service**.
+2. Connect your GitHub account and select your repository.
+
+### 3. Configure the service
+
+| Field | Value |
+|---|---|
+| **Environment** | Docker |
+| **Root Directory** | `movie-night-market` (if the app is in a subdirectory; leave blank if it is the repo root) |
+| **Region** | Closest to you |
+| **Instance Type** | Starter ($7/mo) or higher |
+
+Leave Build Command and Start Command blank — the Dockerfile handles both.
+
+### 4. Add a Persistent Disk
+
+In the **Advanced** section (or after creation under **Disks**):
+
+| Field | Value |
+|---|---|
+| **Name** | `movie-night-data` |
+| **Mount Path** | `/data` |
+| **Size** | 1 GB |
+
+### 5. Set Environment Variables
+
+In the **Environment** section, add:
+
+| Key | Value |
+|---|---|
+| `DATABASE_URL` | `file:/data/prod.db` |
+| `POSTER_UPLOAD_DIR` | `/data/uploads` |
+| `ADMIN_PASSCODE` | *(choose a strong passcode)* |
+| `NODE_ENV` | `production` |
+
+### 6. Deploy
+
+Click **Create Web Service**. Render will:
+1. Build the Docker image (≈ 2–4 minutes on first build).
+2. Mount `/data` from the persistent disk.
+3. Run `prisma db push` to initialize the SQLite database at `/data/prod.db`.
+4. Start `next start` on port 3000.
+
+Your app will be live at `https://<your-service-name>.onrender.com`.
+
+### Re-deploys
+
+Push to your GitHub branch and Render will rebuild and redeploy automatically. The persistent disk (database + uploaded posters) survives re-deploys unchanged. `prisma db push` runs on every start and is safe to run repeatedly — it only applies schema changes.
+
+## Admin
+
+- Admin login page: `/admin/login`
+- Default passcode: `popcorn`
+- Change it with `ADMIN_PASSCODE`
+
+Admin can create one active movie night at a time, enter exactly five movie options, paste poster URLs, upload poster images, open/close voting, reveal the winner, open post-watch ratings, and archive the night.
+
+## Phone Testing
+
+Before sharing broadly, test these on a real phone browser:
+
+1. Create a movie night in admin.
+2. Open voting.
+3. Tap all five vote rating controls and submit.
+4. Confirm the same phone cannot vote twice.
+5. Reveal a winner and open post-watch ratings.
+6. Tap a post-watch rating and submit.
