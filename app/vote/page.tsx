@@ -55,6 +55,8 @@ export default async function VotePage() {
           position: option.position,
           movie: {
             title: option.movie.title,
+            year: option.movie.year,
+            runtimeMinutes: option.movie.runtimeMinutes,
             synopsis: option.movie.synopsis,
             posterUrl: option.movie.posterUrl,
           },

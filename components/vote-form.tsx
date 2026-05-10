@@ -5,12 +5,15 @@ import { CheckCircle2 } from "lucide-react";
 import type { FormState } from "@/lib/actions";
 import { submitPreWatchVoteAction } from "@/lib/actions";
 import { MoviePoster } from "@/components/movie-poster";
+import { formatMovieMeta } from "@/lib/format";
 
 type VoteOption = {
   id: string;
   position: number;
   movie: {
     title: string;
+    year: number;
+    runtimeMinutes: number;
     synopsis: string;
     posterUrl?: string | null;
   };
@@ -55,6 +58,11 @@ export function VoteForm({ nightId, title, options }: Props) {
               <h2 className="headline mt-1 text-3xl leading-tight text-[var(--ink-1)]">
                 {option.movie.title}
               </h2>
+              {formatMovieMeta(option.movie.year, option.movie.runtimeMinutes) ? (
+                <p className="mt-1 text-sm font-semibold text-[var(--ink-2)]">
+                  {formatMovieMeta(option.movie.year, option.movie.runtimeMinutes)}
+                </p>
+              ) : null}
             </div>
             <p className="text-base leading-7 text-[var(--ink-2)]">{option.movie.synopsis}</p>
 
@@ -75,6 +83,10 @@ export function VoteForm({ nightId, title, options }: Props) {
                     <span className="rating-face">{value}</span>
                   </label>
                 ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between px-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--ink-2)]">
+                <span>Skip</span>
+                <span>Must Watch</span>
               </div>
             </fieldset>
           </div>

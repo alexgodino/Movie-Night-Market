@@ -117,6 +117,8 @@ export async function createMovieNightAction(
     const synopsis = String(formData.get(`movieDescription-${position}`) ?? "").trim();
     const posterUrl = normalizePosterUrl(String(formData.get(`moviePosterUrl-${position}`) ?? ""));
     const posterFile = formData.get(`moviePosterFile-${position}`);
+    const year = Number(formData.get(`movieYear-${position}`));
+    const runtimeMinutes = Number(formData.get(`movieRuntimeMinutes-${position}`));
 
     return {
       position,
@@ -124,6 +126,8 @@ export async function createMovieNightAction(
       synopsis,
       posterUrl,
       posterFile: posterFile instanceof File ? posterFile : null,
+      year: Number.isFinite(year) && year > 0 ? year : new Date().getFullYear(),
+      runtimeMinutes: Number.isFinite(runtimeMinutes) && runtimeMinutes > 0 ? runtimeMinutes : 0,
     };
   });
 
@@ -146,6 +150,8 @@ export async function createMovieNightAction(
   let moviesWithPosters: Array<{
     position: number;
     title: string;
+    year: number;
+    runtimeMinutes: number;
     synopsis: string;
     posterUrl: string | null;
   }>;
@@ -159,6 +165,8 @@ export async function createMovieNightAction(
         return {
           position: movie.position,
           title: movie.title,
+          year: movie.year,
+          runtimeMinutes: movie.runtimeMinutes,
           synopsis: movie.synopsis,
           posterUrl: uploadedPosterUrl ?? movie.posterUrl,
         };
@@ -183,8 +191,8 @@ export async function createMovieNightAction(
             create: {
               slug: `${slugify(movie.title) || "movie"}-${nightSlug}-${movie.position}`,
               title: movie.title,
-              year: new Date().getFullYear(),
-              runtimeMinutes: 0,
+              year: movie.year,
+              runtimeMinutes: movie.runtimeMinutes,
               genres: "Manual pick",
               synopsis: movie.synopsis,
               posterUrl: movie.posterUrl,

@@ -6,6 +6,7 @@ import { ArrowDownRight, ArrowUpRight, HelpCircle, Minus, Trophy } from "lucide-
 import clsx from "clsx";
 import { RESULT_POLL_INTERVAL_MS } from "@/lib/constants";
 import { MoviePoster } from "@/components/movie-poster";
+import { formatMovieMeta } from "@/lib/format";
 
 type ResultEntry = {
   optionId: string;
@@ -179,6 +180,11 @@ export function MarketBoard({ initialData }: Props) {
                       Rank #{index + 1}
                     </p>
                     <h2 className="headline mt-1 text-2xl text-[var(--ink-1)]">{entry.title}</h2>
+                    {formatMovieMeta(entry.year, entry.runtimeMinutes) ? (
+                      <p className="mt-1 text-sm font-semibold text-[var(--ink-2)]">
+                        {formatMovieMeta(entry.year, entry.runtimeMinutes)}
+                      </p>
+                    ) : null}
                   </div>
                   <div
                     className={clsx(

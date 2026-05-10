@@ -72,12 +72,12 @@ export default async function ResultsPage({ searchParams }: Props) {
         </section>
       ) : null}
 
-      {/* Market board header */}
+      {/* Standings header */}
       <section className="glass-panel rounded-[2rem] p-6">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
           Live leaderboard
         </p>
-        <h1 className="headline mt-2 text-5xl">Market board</h1>
+        <h1 className="headline mt-2 text-5xl">Tonight’s Standings</h1>
         <p className="mt-3 text-base leading-7 text-[var(--ink-2)]">
           Rankings update every few seconds. Scores favor movies the whole group can enjoy.
         </p>
