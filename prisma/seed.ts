@@ -4,6 +4,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   await prisma.preWatchVoteItem.deleteMany();
+  await prisma.tieBreakVote.deleteMany();
   await prisma.preWatchVote.deleteMany();
   await prisma.postWatchRating.deleteMany();
   await prisma.movieNightOption.deleteMany();

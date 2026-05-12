@@ -10,6 +10,7 @@ import { formatMovieMeta } from "@/lib/format";
 type VoteOption = {
   id: string;
   position: number;
+  debugSummary?: string | null;
   movie: {
     title: string;
     year: number;
@@ -55,6 +56,11 @@ export function VoteForm({ nightId, title, options }: Props) {
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-strong)]">
                 Option {option.position}
               </p>
+              {option.debugSummary === "Last night's runner-up" ? (
+                <p className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[var(--ink-2)]">
+                  Last night&apos;s runner-up
+                </p>
+              ) : null}
               <h2 className="headline mt-1 text-3xl leading-tight text-[var(--ink-1)]">
                 {option.movie.title}
               </h2>
@@ -89,6 +95,15 @@ export function VoteForm({ nightId, title, options }: Props) {
                 <span>Must Watch</span>
               </div>
             </fieldset>
+
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink-2)]">
+              <input
+                type="checkbox"
+                name={`seen-${option.id}`}
+                className="size-4 rounded border-[var(--line)] accent-[var(--surface-4)]"
+              />
+              Seen this before
+            </label>
           </div>
         </section>
       ))}

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -11,6 +11,7 @@ enum MovieNightStatus {
   DRAFT
   VOTING_OPEN
   VOTING_CLOSED
+  TIE_BREAK_OPEN
   WINNER_REVEALED
   POST_WATCH_OPEN
   ARCHIVED
@@ -31,6 +32,7 @@ model Movie {
   updatedAt      DateTime          @updatedAt
   options        MovieNightOption[]
   winnerNights   MovieNight[]      @relation("WinnerMovie")
+  runnerUpNights MovieNight[]      @relation("RunnerUpMovie")
 }
 
 model MovieNight {
@@ -44,13 +46,16 @@ model MovieNight {
   postWatchOpenedAt DateTime?
   archivedAt        DateTime?
   winnerMovieId     String?
+  runnerUpMovieId   String?
   votingEndsAt      DateTime?
   notes             String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   winnerMovie       Movie?             @relation("WinnerMovie", fields: [winnerMovieId], references: [id])
+  runnerUpMovie     Movie?             @relation("RunnerUpMovie", fields: [runnerUpMovieId], references: [id])
   options           MovieNightOption[]
   preWatchVotes     PreWatchVote[]
+  tieBreakVotes     TieBreakVote[]
   postWatchRatings  PostWatchRating[]
 }
 
@@ -66,6 +71,7 @@ model MovieNightOption {
   movieNight       MovieNight         @relation(fields: [movieNightId], references: [id], onDelete: Cascade)
   movie            Movie              @relation(fields: [movieId], references: [id])
   preWatchVoteItems PreWatchVoteItem[]
+  tieBreakVotes    TieBreakVote[]
 
   @@unique([movieNightId, movieId])
   @@unique([movieNightId, position])
@@ -78,6 +84,7 @@ model DeviceIdentity {
   updatedAt        DateTime          @updatedAt
   lastSeenAt       DateTime          @default(now())
   preWatchVotes    PreWatchVote[]
+  tieBreakVotes    TieBreakVote[]
   postWatchRatings PostWatchRating[]
 }
 
@@ -102,9 +109,25 @@ model PreWatchVoteItem {
   movieNightOptionId String
   rating            Int
   adjustedRating    Float
+  seenBefore        Boolean          @default(false)
   createdAt         DateTime         @default(now())
   preWatchVote      PreWatchVote     @relation(fields: [preWatchVoteId], references: [id], onDelete: Cascade)
   movieNightOption  MovieNightOption @relation(fields: [movieNightOptionId], references: [id], onDelete: Cascade)
+}
+
+model TieBreakVote {
+  id                 String            @id @default(cuid())
+  movieNightId       String
+  deviceIdentityId   String
+  movieNightOptionId String?
+  fineWithEither     Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  movieNight         MovieNight        @relation(fields: [movieNightId], references: [id], onDelete: Cascade)
+  deviceIdentity     DeviceIdentity    @relation(fields: [deviceIdentityId], references: [id], onDelete: Cascade)
+  movieNightOption   MovieNightOption? @relation(fields: [movieNightOptionId], references: [id], onDelete: Cascade)
+
+  @@unique([movieNightId, deviceIdentityId])
 }
 
 model PostWatchRating {

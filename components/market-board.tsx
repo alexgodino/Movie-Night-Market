@@ -19,6 +19,7 @@ type ResultEntry = {
   synopsis: string;
   posterUrl?: string | null;
   position: number;
+  debugSummary?: string | null;
   score: number;
   robustAverage: number;
   approvalShare: number;
@@ -179,6 +180,11 @@ export function MarketBoard({ initialData }: Props) {
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
                       Rank #{index + 1}
                     </p>
+                    {entry.debugSummary === "Last night's runner-up" ? (
+                      <p className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[var(--ink-2)]">
+                        Last night&apos;s runner-up
+                      </p>
+                    ) : null}
                     <h2 className="headline mt-1 text-2xl text-[var(--ink-1)]">{entry.title}</h2>
                     {formatMovieMeta(entry.year, entry.runtimeMinutes) ? (
                       <p className="mt-1 text-sm font-semibold text-[var(--ink-2)]">

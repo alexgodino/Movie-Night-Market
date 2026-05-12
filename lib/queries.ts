@@ -7,6 +7,7 @@ const activeStatuses: MovieNightStatus[] = [
   "DRAFT",
   "VOTING_OPEN",
   "VOTING_CLOSED",
+  "TIE_BREAK_OPEN",
   "WINNER_REVEALED",
   "POST_WATCH_OPEN",
 ];
@@ -26,6 +27,7 @@ const nightInclude = {
     include: { movie: true },
   },
   winnerMovie: true,
+  runnerUpMovie: true,
   preWatchVotes: {
     include: {
       deviceIdentity: true,
@@ -33,6 +35,14 @@ const nightInclude = {
         include: {
           movieNightOption: true,
         },
+      },
+    },
+  },
+  tieBreakVotes: {
+    include: {
+      deviceIdentity: true,
+      movieNightOption: {
+        include: { movie: true },
       },
     },
   },
@@ -94,6 +104,7 @@ export async function getResultsForNight(night: NightWithDetails) {
         synopsis: option.movie.synopsis,
         posterUrl: option.movie.posterUrl,
         position: option.position,
+        debugSummary: option.debugSummary,
         score: score?.score ?? 0,
         robustAverage: score?.robustAverage ?? 0,
         approvalShare: score?.approvalShare ?? 0,
@@ -106,6 +117,16 @@ export async function getResultsForNight(night: NightWithDetails) {
     .sort((left, right) => right.score - left.score || left.position - right.position);
 }
 
+export function getTiedFirstPlaceResults(results: Awaited<ReturnType<typeof getResultsForNight>>) {
+  const topScore = results[0]?.score;
+  if (topScore === undefined) {
+    return [];
+  }
+
+  const tied = results.filter((result) => Math.abs(result.score - topScore) < 0.01);
+  return tied.length > 1 ? tied : [];
+}
+
 export async function getViewerState(deviceKey: string) {
   const activeNight = await getActiveNight();
 
@@ -114,6 +135,7 @@ export async function getViewerState(deviceKey: string) {
       activeNight: null,
       hasVoted: false,
       hasRatedWinner: false,
+      hasTieBreakVoted: false,
       viewerVoteId: null as string | null,
     };
   }
@@ -129,8 +151,26 @@ export async function getViewerState(deviceKey: string) {
     activeNight,
     hasVoted: Boolean(vote),
     hasRatedWinner: Boolean(rating),
+    hasTieBreakVoted: activeNight.tieBreakVotes.some(
+      (entry) => entry.deviceIdentity.deviceKey === deviceKey,
+    ),
     viewerVoteId: vote?.id ?? null,
   };
+}
+
+export async function getLastRunnerUpMovie() {
+  const lastNight = await prisma.movieNight.findFirst({
+    where: {
+      status: "ARCHIVED",
+      runnerUpMovieId: { not: null },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      runnerUpMovie: true,
+    },
+  });
+
+  return lastNight?.runnerUpMovie ?? null;
 }
 
 /**
@@ -222,6 +262,8 @@ export function getNightStatusCopy(status: MovieNightStatus) {
       return "Voting is open now.";
     case "VOTING_CLOSED":
       return "Voting is closed while the winner is locked in.";
+    case "TIE_BREAK_OPEN":
+      return "A tie-break vote is open.";
     case "WINNER_REVEALED":
       return "The movie is picked. Ratings will open after the watch.";
     case "POST_WATCH_OPEN":

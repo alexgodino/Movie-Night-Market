@@ -2,12 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { MarketBoard } from "@/components/market-board";
+import { TieBreakForm } from "@/components/tie-break-form";
 import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
-import { getResultsForNight, getViewerState } from "@/lib/queries";
+import { getResultsForNight, getTiedFirstPlaceResults, getViewerState } from "@/lib/queries";
 
 type Props = {
   searchParams: Promise<{
     submitted?: string;
+    tiebreak?: string;
   }>;
 };
 
@@ -15,7 +17,8 @@ export default async function ResultsPage({ searchParams }: Props) {
   const params = await searchParams;
   const deviceId = await getDeviceIdFromCookie();
   await touchDeviceIdentity(deviceId);
-  const { activeNight, hasVoted, hasRatedWinner } = await getViewerState(deviceId);
+  const { activeNight, hasVoted, hasRatedWinner, hasTieBreakVoted } =
+    await getViewerState(deviceId);
 
   if (!activeNight) {
     return (
@@ -53,6 +56,7 @@ export default async function ResultsPage({ searchParams }: Props) {
   }
 
   const results = await getResultsForNight(activeNight);
+  const tiedFirst = getTiedFirstPlaceResults(results);
 
   return (
     <main className="app-shell space-y-5 pb-10">
@@ -70,6 +74,20 @@ export default async function ResultsPage({ searchParams }: Props) {
             </div>
           </div>
         </section>
+      ) : null}
+
+      {activeNight.status === "TIE_BREAK_OPEN" && tiedFirst.length > 1 ? (
+        <TieBreakForm
+          nightId={activeNight.id}
+          alreadySubmitted={hasTieBreakVoted || Boolean(params.tiebreak)}
+          options={tiedFirst.map((result) => ({
+            optionId: result.optionId,
+            title: result.title,
+            year: result.year,
+            runtimeMinutes: result.runtimeMinutes,
+            posterUrl: result.posterUrl,
+          }))}
+        />
       ) : null}
 
       {/* Standings header */}

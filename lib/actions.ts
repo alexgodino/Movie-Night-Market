@@ -9,7 +9,7 @@ import { isValidAdminPasscode, requireAdmin, setAdminCookie, clearAdminCookie } 
 import { prisma } from "@/lib/prisma";
 import { adjustBallot } from "@/lib/scoring";
 import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
-import { getActiveNight, getResultsForNight } from "@/lib/queries";
+import { getActiveNight, getLastRunnerUpMovie, getNightById, getResultsForNight, getTiedFirstPlaceResults } from "@/lib/queries";
 
 export type FormState = {
   error?: string;
@@ -31,6 +31,27 @@ async function refreshAll() {
   revalidatePath("/admin");
   revalidatePath("/admin/create");
   revalidatePath("/admin/history");
+}
+
+function getRunnerUpMovieId(
+  results: Awaited<ReturnType<typeof getResultsForNight>>,
+  winnerMovieId: string,
+) {
+  return results.find((result) => result.movieId !== winnerMovieId)?.movieId ?? null;
+}
+
+function persistResultScores(
+  results: Awaited<ReturnType<typeof getResultsForNight>>,
+) {
+  return results.map((result, index) =>
+    prisma.movieNightOption.update({
+      where: { id: result.optionId },
+      data: {
+        marketScore: result.score,
+        debugSummary: `Rank ${index + 1} | avg ${result.robustAverage.toFixed(2)} | approval ${(result.approvalShare * 100).toFixed(0)}% | dislike ${(result.dislikeShare * 100).toFixed(0)}%`,
+      },
+    }),
+  );
 }
 
 function normalizePosterUrl(value: string) {
@@ -111,8 +132,11 @@ export async function createMovieNightAction(
 
   const title = String(formData.get("title") ?? "").trim() || "Movie Night";
   const closesAtRaw = String(formData.get("votingEndsAt") ?? "");
+  const includeLastRunnerUp = formData.get("includeLastRunnerUp") === "on";
+  const lastRunnerUp = includeLastRunnerUp ? await getLastRunnerUpMovie() : null;
+  const manualPositions = lastRunnerUp ? [1, 2, 3, 4] : [1, 2, 3, 4, 5];
 
-  const manualMovies = [1, 2, 3, 4, 5].map((position) => {
+  const manualMovies = manualPositions.map((position) => {
     const movieTitle = String(formData.get(`movieTitle-${position}`) ?? "").trim();
     const synopsis = String(formData.get(`movieDescription-${position}`) ?? "").trim();
     const posterUrl = normalizePosterUrl(String(formData.get(`moviePosterUrl-${position}`) ?? ""));
@@ -131,11 +155,15 @@ export async function createMovieNightAction(
     };
   });
 
-  if (manualMovies.some((movie) => !movie.title || !movie.synopsis)) {
-    return { error: "Enter a title and description for all five movie options." };
+  if (includeLastRunnerUp && !lastRunnerUp) {
+    return { error: "There is no previous runner-up to include yet." };
   }
 
-  const invalidPosterUrl = [1, 2, 3, 4, 5].some((position) => {
+  if (manualMovies.some((movie) => !movie.title || !movie.synopsis)) {
+    return { error: lastRunnerUp ? "Enter a title and description for the four new movie options." : "Enter a title and description for all five movie options." };
+  }
+
+  const invalidPosterUrl = manualPositions.some((position) => {
     const raw = String(formData.get(`moviePosterUrl-${position}`) ?? "").trim();
     return raw && !normalizePosterUrl(raw);
   });
@@ -185,22 +213,35 @@ export async function createMovieNightAction(
       status: "DRAFT",
       votingEndsAt: closesAtRaw ? new Date(closesAtRaw) : null,
       options: {
-        create: moviesWithPosters.map((movie) => ({
-          position: movie.position,
-          movie: {
-            create: {
-              slug: `${slugify(movie.title) || "movie"}-${nightSlug}-${movie.position}`,
-              title: movie.title,
-              year: movie.year,
-              runtimeMinutes: movie.runtimeMinutes,
-              genres: "Manual pick",
-              synopsis: movie.synopsis,
-              posterUrl: movie.posterUrl,
-              sourceFilename: "Manual entry",
-              sourcePath: "Manual admin entry",
+        create: [
+          ...moviesWithPosters.map((movie) => ({
+            position: movie.position,
+            movie: {
+              create: {
+                slug: `${slugify(movie.title) || "movie"}-${nightSlug}-${movie.position}`,
+                title: movie.title,
+                year: movie.year,
+                runtimeMinutes: movie.runtimeMinutes,
+                genres: "Manual pick",
+                synopsis: movie.synopsis,
+                posterUrl: movie.posterUrl,
+                sourceFilename: "Manual entry",
+                sourcePath: "Manual admin entry",
+              },
             },
-          },
-        })),
+          })),
+          ...(lastRunnerUp
+            ? [
+                {
+                  position: 5,
+                  debugSummary: "Last night's runner-up",
+                  movie: {
+                    connect: { id: lastRunnerUp.id },
+                  },
+                },
+              ]
+            : []),
+        ],
       },
     },
   });
@@ -253,9 +294,48 @@ export async function revealWinnerAction() {
   }
 
   const results = await getResultsForNight(night);
-  const winner = results[0];
+  const tiedFirst = getTiedFirstPlaceResults(results);
+  const tieBreakVotes = night.tieBreakVotes.filter(
+    (vote) =>
+      !vote.fineWithEither &&
+      vote.movieNightOptionId &&
+      tiedFirst.some((result) => result.optionId === vote.movieNightOptionId),
+  );
+  const winner =
+    tiedFirst.length > 1
+      ? tiedFirst
+          .map((result) => ({
+            result,
+            tieBreakVotes: tieBreakVotes.filter(
+              (vote) => vote.movieNightOptionId === result.optionId,
+            ).length,
+          }))
+          .sort(
+            (left, right) =>
+              right.tieBreakVotes - left.tieBreakVotes ||
+              left.result.position - right.result.position,
+          )[0]?.result
+      : results[0];
 
   if (!winner) {
+    return;
+  }
+
+  const scoreUpdates = persistResultScores(results);
+
+  if (tiedFirst.length > 1 && night.status !== "TIE_BREAK_OPEN" && tieBreakVotes.length === 0) {
+    await prisma.$transaction([
+      prisma.movieNight.update({
+        where: { id: night.id },
+        data: {
+          status: "TIE_BREAK_OPEN",
+          closedVotingAt: night.closedVotingAt ?? new Date(),
+        },
+      }),
+      ...scoreUpdates,
+    ]);
+
+    await refreshAll();
     return;
   }
 
@@ -265,18 +345,11 @@ export async function revealWinnerAction() {
       data: {
         status: "WINNER_REVEALED",
         winnerMovieId: winner.movieId,
+        runnerUpMovieId: getRunnerUpMovieId(results, winner.movieId),
         winnerRevealedAt: new Date(),
       },
     }),
-    ...results.map((result, index) =>
-      prisma.movieNightOption.update({
-        where: { id: result.optionId },
-        data: {
-          marketScore: result.score,
-          debugSummary: `Rank ${index + 1} | avg ${result.robustAverage.toFixed(2)} | approval ${(result.approvalShare * 100).toFixed(0)}% | dislike ${(result.dislikeShare * 100).toFixed(0)}%`,
-        },
-      }),
-    ),
+    ...scoreUpdates,
   ]);
 
   await refreshAll();
@@ -364,6 +437,7 @@ export async function submitPreWatchVoteAction(
     optionId: option.id,
     movieId: option.movieId,
     rating: Number(formData.get(`option-${option.id}`)),
+    seenBefore: formData.get(`seen-${option.id}`) === "on",
   }));
 
   if (ratings.some((item) => Number.isNaN(item.rating) || item.rating < 1 || item.rating > 5)) {
@@ -388,6 +462,7 @@ export async function submitPreWatchVoteAction(
             movieNightOptionId: item.optionId,
             rating: item.rating,
             adjustedRating: adjusted.adjustedRatings[item.optionId],
+            seenBefore: item.seenBefore,
           })),
         },
       },
@@ -404,6 +479,61 @@ export async function submitPreWatchVoteAction(
 
   await refreshAll();
   redirect("/results?submitted=1");
+}
+
+export async function submitTieBreakVoteAction(
+  _prevState: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const nightId = String(formData.get("nightId") ?? "");
+  const deviceId = String(formData.get("deviceId") ?? "") || (await getDeviceIdFromCookie());
+  const tieChoice = String(formData.get("tieChoice") ?? "");
+
+  if (!nightId || !deviceId) {
+    return { error: "Missing device identity. Refresh the page and try again." };
+  }
+
+  const night = await getNightById(nightId);
+
+  if (!night || night.status !== "TIE_BREAK_OPEN") {
+    return { error: "Tie-break voting is not open right now." };
+  }
+
+  const device = await touchDeviceIdentity(deviceId);
+  if (!device) {
+    return { error: "Could not verify your device." };
+  }
+
+  const results = await getResultsForNight(night);
+  const tiedFirst = getTiedFirstPlaceResults(results);
+  const tiedOptionIds = new Set(tiedFirst.map((result) => result.optionId));
+  const isFineWithEither = tieChoice === "fine-with-either";
+
+  if (!isFineWithEither && !tiedOptionIds.has(tieChoice)) {
+    return { error: "Pick one of the tied movies or choose fine with either." };
+  }
+
+  await prisma.tieBreakVote.upsert({
+    where: {
+      movieNightId_deviceIdentityId: {
+        movieNightId: night.id,
+        deviceIdentityId: device.id,
+      },
+    },
+    update: {
+      movieNightOptionId: isFineWithEither ? null : tieChoice,
+      fineWithEither: isFineWithEither,
+    },
+    create: {
+      movieNightId: night.id,
+      deviceIdentityId: device.id,
+      movieNightOptionId: isFineWithEither ? null : tieChoice,
+      fineWithEither: isFineWithEither,
+    },
+  });
+
+  await refreshAll();
+  redirect("/results?tiebreak=1");
 }
 
 export async function submitPostWatchRatingAction(

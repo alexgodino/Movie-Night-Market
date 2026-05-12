@@ -53,6 +53,7 @@ export default async function VotePage() {
         options={activeNight.options.map((option) => ({
           id: option.id,
           position: option.position,
+          debugSummary: option.debugSummary,
           movie: {
             title: option.movie.title,
             year: option.movie.year,

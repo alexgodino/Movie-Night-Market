@@ -9,6 +9,11 @@ import { formatRuntime } from "@/lib/format";
 const initialState: FormState = {};
 const optionNumbers = [1, 2, 3, 4, 5];
 
+type PreviousRunnerUp = {
+  title: string;
+  year: number;
+} | null;
+
 type TmdbMovieResult = {
   id: number;
   title: string;
@@ -261,8 +266,10 @@ function MovieOptionFields({ position }: { position: number }) {
   );
 }
 
-export function NightBuilder() {
+export function NightBuilder({ previousRunnerUp }: { previousRunnerUp: PreviousRunnerUp }) {
   const [state, action, pending] = useActionState(createMovieNightAction, initialState);
+  const [includeRunnerUp, setIncludeRunnerUp] = useState(false);
+  const activeOptionNumbers = includeRunnerUp && previousRunnerUp ? [1, 2, 3, 4] : optionNumbers;
 
   return (
     <form action={action} encType="multipart/form-data" className="space-y-5 pb-32">
@@ -294,6 +301,25 @@ export function NightBuilder() {
               className="mt-2 w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-4 text-lg text-[var(--ink-1)] shadow-sm outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
             />
           </div>
+          {previousRunnerUp ? (
+            <label className="flex items-start gap-3 rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-4 text-left">
+              <input
+                type="checkbox"
+                name="includeLastRunnerUp"
+                checked={includeRunnerUp}
+                onChange={(event) => setIncludeRunnerUp(event.target.checked)}
+                className="mt-1 size-4 shrink-0 accent-[var(--surface-4)]"
+              />
+              <span>
+                <span className="block text-sm font-bold text-[var(--ink-1)]">
+                  Include last night&apos;s runner-up
+                </span>
+                <span className="mt-1 block text-sm text-[var(--ink-2)]">
+                  Adds {previousRunnerUp.title} ({previousRunnerUp.year}) as the fifth option.
+                </span>
+              </span>
+            </label>
+          ) : null}
         </div>
       </section>
 
@@ -304,9 +330,22 @@ export function NightBuilder() {
       ) : null}
 
       <div className="space-y-4">
-        {optionNumbers.map((position) => (
+        {activeOptionNumbers.map((position) => (
           <MovieOptionFields key={position} position={position} />
         ))}
+        {includeRunnerUp && previousRunnerUp ? (
+          <section className="section-card rounded-[2rem] p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+              Movie 5
+            </p>
+            <h2 className="headline mt-2 text-2xl text-[var(--ink-1)]">
+              {previousRunnerUp.title}
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-[var(--ink-2)]">
+              Last night&apos;s runner-up
+            </p>
+          </section>
+        ) : null}
       </div>
 
       <div className="sticky-action-bar">

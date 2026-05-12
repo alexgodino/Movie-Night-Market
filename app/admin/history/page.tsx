@@ -22,6 +22,10 @@ export default async function AdminHistoryPage() {
           nights.map(async (night) => {
             const results = await getResultsForNight(night);
             const winner = night.winnerMovie?.title ?? results[0]?.title ?? "Not revealed";
+            const runnerUp =
+              night.runnerUpMovie?.title ??
+              results.find((result) => result.movieId !== night.winnerMovieId)?.title ??
+              "n/a";
             const averagePostWatch =
               night.postWatchRatings.length > 0
                 ? (
@@ -36,7 +40,7 @@ export default async function AdminHistoryPage() {
                   {night.status.replaceAll("_", " ").toLowerCase()}
                 </p>
                 <h2 className="headline mt-2 text-3xl">{night.title}</h2>
-                <div className="mt-4 grid grid-cols-3 gap-3 text-center text-sm">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-center text-sm">
                   <div className="rounded-2xl bg-white px-3 py-3">
                     <div className="font-bold text-[var(--ink-1)]">{night.preWatchVotes.length}</div>
                     <div className="text-[var(--ink-2)]">ballots</div>
@@ -44,6 +48,10 @@ export default async function AdminHistoryPage() {
                   <div className="rounded-2xl bg-white px-3 py-3">
                     <div className="font-bold text-[var(--ink-1)]">{winner}</div>
                     <div className="text-[var(--ink-2)]">winner</div>
+                  </div>
+                  <div className="rounded-2xl bg-white px-3 py-3">
+                    <div className="font-bold text-[var(--ink-1)]">{runnerUp}</div>
+                    <div className="text-[var(--ink-2)]">runner-up</div>
                   </div>
                   <div className="rounded-2xl bg-white px-3 py-3">
                     <div className="font-bold text-[var(--ink-1)]">{averagePostWatch}</div>
