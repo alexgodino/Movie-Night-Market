@@ -57,6 +57,7 @@ export default async function ResultsPage({ searchParams }: Props) {
 
   const results = await getResultsForNight(activeNight);
   const tiedFirst = getTiedFirstPlaceResults(results);
+  const totalVotes = results.length > 0 ? (results[0].voteCount ?? 0) : 0;
 
   return (
     <main className="app-shell space-y-5 pb-10">
@@ -95,7 +96,14 @@ export default async function ResultsPage({ searchParams }: Props) {
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
           Live leaderboard
         </p>
-        <h1 className="headline mt-2 text-5xl">Tonight’s Standings</h1>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="headline text-5xl">Tonight&apos;s Standings</h1>
+          {totalVotes > 0 && (
+            <span className="text-sm font-semibold text-[var(--ink-2)]">
+              • {totalVotes} {totalVotes === 1 ? "Vote" : "Votes"}
+            </span>
+          )}
+        </div>
         <p className="mt-3 text-base leading-7 text-[var(--ink-2)]">
           Rankings update every few seconds. Scores favor movies the whole group can enjoy.
         </p>

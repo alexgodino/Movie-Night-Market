@@ -373,12 +373,20 @@ export function MarketBoard({ initialData }: Props) {
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold">
-                      <span className={clsx("inline-flex items-center rounded-full border px-3 py-1", movementTone)}>
-                        {movementLabel}
-                      </span>
-                      <span className={clsx("inline-flex items-center rounded-full border px-3 py-1", profileTone)}>
-                        {entry.profileLabel}
-                      </span>
+                      {entry.voteCount >= 2 ? (
+                        <>
+                          <span className={clsx("inline-flex items-center rounded-full border px-3 py-1", movementTone)}>
+                            {movementLabel}
+                          </span>
+                          <span className={clsx("inline-flex items-center rounded-full border px-3 py-1", profileTone)}>
+                            {entry.profileLabel}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[var(--ink-2)]">
+                          —
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
@@ -386,17 +394,17 @@ export function MarketBoard({ initialData }: Props) {
                         <div className="font-semibold text-[var(--ink-1)]">
                           {entry.robustAverage.toFixed(2)}
                         </div>
-                        <div className="text-[var(--ink-2)]">Average</div>
+                        <div className="text-[var(--ink-2)]">Avg</div>
                       </div>
                       <div className="rounded-2xl bg-white px-3 py-3">
                         <div className="font-semibold text-[var(--ink-1)]">
                           {entry.ratingCounts.five}
                         </div>
-                        <div className="text-[var(--ink-2)]">5-star ratings</div>
+                        <div className="text-[var(--ink-2)]">5★</div>
                       </div>
                       <div className="rounded-2xl bg-white px-3 py-3">
-                        <div className="font-semibold text-[var(--ink-1)]">{entry.voteCount}</div>
-                        <div className="text-[var(--ink-2)]">Votes</div>
+                        <div className="font-semibold text-[var(--ink-1)]">{entry.ratingCounts.one}</div>
+                        <div className="text-[var(--ink-2)]">1★</div>
                       </div>
                     </div>
                   </div>
