@@ -16,7 +16,14 @@ export type RankedMovieResult = {
   dislikeShare: number;
   volatility: number;
   voteCount: number;
-  trendLabel: string;
+  ratingCounts: {
+    one: number;
+    two: number;
+    three: number;
+    four: number;
+    five: number;
+  };
+  profileLabel: string;
 };
 
 export type BallotAdjustmentSummary = {
@@ -51,6 +58,83 @@ function trimmedAverage(values: number[]) {
 
   const sorted = [...values].sort((a, b) => a - b);
   return average(sorted.slice(1, -1));
+}
+
+function countRatings(values: number[]) {
+  return values.reduce(
+    (counts, value) => {
+      if (value === 1) counts.one += 1;
+      if (value === 2) counts.two += 1;
+      if (value === 3) counts.three += 1;
+      if (value === 4) counts.four += 1;
+      if (value === 5) counts.five += 1;
+      return counts;
+    },
+    {
+      one: 0,
+      two: 0,
+      three: 0,
+      four: 0,
+      five: 0,
+    },
+  );
+}
+
+function getProfileLabel({
+  ratingCounts,
+  approvalShare,
+  dislikeShare,
+  robustAverage,
+}: {
+  ratingCounts: {
+    one: number;
+    two: number;
+    three: number;
+    four: number;
+    five: number;
+  };
+  approvalShare: number;
+  dislikeShare: number;
+  robustAverage: number;
+}) {
+  const voteCount =
+    ratingCounts.one +
+    ratingCounts.two +
+    ratingCounts.three +
+    ratingCounts.four +
+    ratingCounts.five;
+
+  if (!voteCount) {
+    return "Casual Interest";
+  }
+
+  const lowShare = (ratingCounts.one + ratingCounts.two) / voteCount;
+  const highShare = (ratingCounts.four + ratingCounts.five) / voteCount;
+  const fiveShare = ratingCounts.five / voteCount;
+  const oneShare = ratingCounts.one / voteCount;
+  const mixedExtremes = oneShare >= 0.2 && fiveShare >= 0.2;
+
+  if (lowShare >= 0.4 || dislikeShare >= 0.4 || robustAverage <= 2.6) {
+    return "Cold Reception";
+  }
+
+  if (mixedExtremes && highShare >= 0.5) {
+    return "Divisive";
+  }
+
+  if (fiveShare >= 0.32 && ratingCounts.five >= ratingCounts.four) {
+    return "Heavy Buzz";
+  }
+
+  if (ratingCounts.four >= ratingCounts.three && highShare >= 0.55 && lowShare <= 0.18) {
+    return "Broad Support";
+  }
+
+  if (approvalShare >= 0.45 && dislikeShare <= 0.2) {
+    return "Broad Support";
+  }
+
+  return "Casual Interest";
 }
 
 export function adjustBallot(ballot: BallotInput): BallotAdjustmentSummary {
@@ -111,6 +195,7 @@ export function rankMovies(ballots: BallotInput[]) {
     const dislikeShare =
       bucket.rawRatings.filter((value) => value <= 2).length / bucket.rawRatings.length;
     const volatility = standardDeviation(bucket.adjustedRatings);
+    const ratingCounts = countRatings(bucket.rawRatings);
     const score =
       robustAverage + approvalShare * 0.45 - dislikeShare * 0.6 - volatility * 0.18;
 
@@ -123,12 +208,13 @@ export function rankMovies(ballots: BallotInput[]) {
       dislikeShare: Number(dislikeShare.toFixed(3)),
       volatility: Number(volatility.toFixed(3)),
       voteCount: bucket.rawRatings.length,
-      trendLabel:
-        approvalShare >= 0.75 && dislikeShare <= 0.15
-          ? "Steady favorite"
-          : dislikeShare >= 0.35
-            ? "Risky pick"
-            : "Crowd contender",
+      ratingCounts,
+      profileLabel: getProfileLabel({
+        ratingCounts,
+        approvalShare,
+        dislikeShare,
+        robustAverage,
+      }),
     };
   });
 

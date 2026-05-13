@@ -14,13 +14,13 @@ export function MoviePoster({ title, posterUrl, compact = false }: Props) {
   const showImage = Boolean(posterUrl?.trim()) && !failed;
   const wrapperClass = clsx(
     "relative w-full overflow-hidden rounded-[1.4rem] border border-[var(--line)] shadow-sm",
-    "aspect-[4/5] bg-[var(--surface-2)]",
+    "aspect-[2/3] bg-[var(--surface-2)]",
     compact && "max-w-28",
   );
 
   if (showImage) {
     return (
-      <div className={wrapperClass}>
+      <div className={clsx(wrapperClass, "p-1.5")}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={posterUrl?.trim()}
@@ -28,7 +28,7 @@ export function MoviePoster({ title, posterUrl, compact = false }: Props) {
           loading="lazy"
           decoding="async"
           onError={() => setFailed(true)}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="h-full w-full rounded-[1.05rem] object-contain"
         />
       </div>
     );

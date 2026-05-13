@@ -507,10 +507,9 @@ export async function submitTieBreakVoteAction(
   const results = await getResultsForNight(night);
   const tiedFirst = getTiedFirstPlaceResults(results);
   const tiedOptionIds = new Set(tiedFirst.map((result) => result.optionId));
-  const isFineWithEither = tieChoice === "fine-with-either";
 
-  if (!isFineWithEither && !tiedOptionIds.has(tieChoice)) {
-    return { error: "Pick one of the tied movies or choose fine with either." };
+  if (!tiedOptionIds.has(tieChoice)) {
+    return { error: "Pick one of the tied movies to break the tie." };
   }
 
   await prisma.tieBreakVote.upsert({
@@ -521,14 +520,14 @@ export async function submitTieBreakVoteAction(
       },
     },
     update: {
-      movieNightOptionId: isFineWithEither ? null : tieChoice,
-      fineWithEither: isFineWithEither,
+      movieNightOptionId: tieChoice,
+      fineWithEither: false,
     },
     create: {
       movieNightId: night.id,
       deviceIdentityId: device.id,
-      movieNightOptionId: isFineWithEither ? null : tieChoice,
-      fineWithEither: isFineWithEither,
+      movieNightOptionId: tieChoice,
+      fineWithEither: false,
     },
   });
 

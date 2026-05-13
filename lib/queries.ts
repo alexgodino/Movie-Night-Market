@@ -111,7 +111,14 @@ export async function getResultsForNight(night: NightWithDetails) {
         dislikeShare: score?.dislikeShare ?? 0,
         volatility: score?.volatility ?? 0,
         voteCount: score?.voteCount ?? 0,
-        trendLabel: score?.trendLabel ?? "Waiting for votes",
+        ratingCounts: score?.ratingCounts ?? {
+          one: 0,
+          two: 0,
+          three: 0,
+          four: 0,
+          five: 0,
+        },
+        profileLabel: score?.profileLabel ?? "Waiting for votes",
       };
     })
     .sort((left, right) => right.score - left.score || left.position - right.position);

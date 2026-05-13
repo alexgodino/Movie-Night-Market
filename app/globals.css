@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --surface-1: #fff9f0;
   --surface-2: #f8efe1;
   --surface-3: #fffdf8;

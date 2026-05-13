@@ -1,19 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 import { cookies } from "next/headers";
 import { DeviceIdentityBootstrap } from "@/components/device-identity-bootstrap";
 import { DEVICE_COOKIE_NAME } from "@/lib/constants";
-
-const bodyFont = DM_Sans({
-  variable: "--font-body",
-  subsets: ["latin"],
-});
-
-const displayFont = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Movie Night Market",
@@ -41,10 +30,7 @@ export default async function RootLayout({
   const deviceId = cookieStore.get(DEVICE_COOKIE_NAME)?.value ?? "";
 
   return (
-    <html
-      lang="en"
-      className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full bg-[var(--surface-2)] text-[var(--ink-1)]">
         <DeviceIdentityBootstrap initialDeviceId={deviceId} />
         {children}

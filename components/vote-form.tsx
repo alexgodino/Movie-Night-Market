@@ -52,23 +52,34 @@ export function VoteForm({ nightId, title, options }: Props) {
           </div>
 
           <div className="space-y-4 p-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-strong)]">
-                Option {option.position}
-              </p>
-              {option.debugSummary === "Last night's runner-up" ? (
-                <p className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[var(--ink-2)]">
-                  Last night&apos;s runner-up
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-strong)]">
+                  Option {option.position}
                 </p>
-              ) : null}
-              <h2 className="headline mt-1 text-3xl leading-tight text-[var(--ink-1)]">
-                {option.movie.title}
-              </h2>
-              {formatMovieMeta(option.movie.year, option.movie.runtimeMinutes) ? (
-                <p className="mt-1 text-sm font-semibold text-[var(--ink-2)]">
-                  {formatMovieMeta(option.movie.year, option.movie.runtimeMinutes)}
-                </p>
-              ) : null}
+                {option.debugSummary === "Last night's runner-up" ? (
+                  <p className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[var(--ink-2)]">
+                    Last night&apos;s runner-up
+                  </p>
+                ) : null}
+                <h2 className="headline mt-1 text-3xl leading-tight text-[var(--ink-1)]">
+                  {option.movie.title}
+                </h2>
+                {formatMovieMeta(option.movie.year, option.movie.runtimeMinutes) ? (
+                  <p className="mt-1 text-sm font-semibold text-[var(--ink-2)]">
+                    {formatMovieMeta(option.movie.year, option.movie.runtimeMinutes)}
+                  </p>
+                ) : null}
+              </div>
+
+              <label className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--ink-2)] shadow-sm">
+                <input
+                  type="checkbox"
+                  name={`seen-${option.id}`}
+                  className="size-4 rounded border-[var(--line)] accent-[var(--surface-4)]"
+                />
+                <span>Seen this before</span>
+              </label>
             </div>
             <p className="text-base leading-7 text-[var(--ink-2)]">{option.movie.synopsis}</p>
 
@@ -95,15 +106,6 @@ export function VoteForm({ nightId, title, options }: Props) {
                 <span>Must Watch</span>
               </div>
             </fieldset>
-
-            <label className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink-2)]">
-              <input
-                type="checkbox"
-                name={`seen-${option.id}`}
-                className="size-4 rounded border-[var(--line)] accent-[var(--surface-4)]"
-              />
-              Seen this before
-            </label>
           </div>
         </section>
       ))}

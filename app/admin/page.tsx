@@ -117,7 +117,7 @@ export default async function AdminDashboardPage() {
                         <h3 className="text-lg font-bold text-[var(--ink-1)]">
                           #{index + 1} {result.title}
                         </h3>
-                        <p className="mt-1 text-sm text-[var(--ink-2)]">{result.trendLabel}</p>
+                        <p className="mt-1 text-sm text-[var(--ink-2)]">{result.profileLabel}</p>
                       </div>
                       <div className="text-right shrink-0">
                         <div className="text-xl font-bold text-[var(--ink-1)]">
