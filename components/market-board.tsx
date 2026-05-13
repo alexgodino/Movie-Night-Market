@@ -50,7 +50,12 @@ type Props = {
 
 type MovementLabel = "Underdog Run" | "Front Runner" | "Slipping" | "Quiet Climber" | "Volatile";
 
-const scoreLayoutTransition = { type: "spring", stiffness: 220, damping: 28, mass: 0.8 };
+const scoreLayoutTransition = {
+  type: "spring",
+  stiffness: 220,
+  damping: 28,
+  mass: 0.8,
+} as const;
 
 function getMovementTone(label: MovementLabel) {
   switch (label) {
