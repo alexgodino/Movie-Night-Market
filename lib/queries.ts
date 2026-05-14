@@ -134,6 +134,27 @@ export function getTiedFirstPlaceResults(results: Awaited<ReturnType<typeof getR
   return tied.length > 1 ? tied : [];
 }
 
+export function getSeenBeforeStats(night: NightWithDetails) {
+  const stats: Record<string, { title: string; total: number; seenBefore: number }> = {};
+
+  night.options.forEach((option) => {
+    stats[option.id] = { title: option.movie.title, total: 0, seenBefore: 0 };
+  });
+
+  night.preWatchVotes.forEach((vote) => {
+    vote.items.forEach((item) => {
+      if (stats[item.movieNightOptionId]) {
+        stats[item.movieNightOptionId].total++;
+        if (item.seenBefore) {
+          stats[item.movieNightOptionId].seenBefore++;
+        }
+      }
+    });
+  });
+
+  return stats;
+}
+
 export async function getViewerState(deviceKey: string) {
   const activeNight = await getActiveNight();
 

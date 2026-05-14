@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
-import { getHistoryNights, getResultsForNight } from "@/lib/queries";
+import { getHistoryNights, getResultsForNight, getSeenBeforeStats } from "@/lib/queries";
 
 export default async function AdminHistoryPage() {
   await requireAdmin();
@@ -34,6 +34,9 @@ export default async function AdminHistoryPage() {
                   ).toFixed(1)
                 : "n/a";
 
+            const seenBeforeStats = getSeenBeforeStats(night);
+            const hasSeenBeforeData = Object.values(seenBeforeStats).some((stat) => stat.total > 0);
+
             return (
               <section key={night.id} className="section-card rounded-[2rem] p-5">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
@@ -58,6 +61,29 @@ export default async function AdminHistoryPage() {
                     <div className="text-[var(--ink-2)]">avg rating</div>
                   </div>
                 </div>
+
+                {hasSeenBeforeData && (
+                  <div className="mt-4 rounded-2xl bg-white px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-strong)]">
+                      Seen this before
+                    </p>
+                    <div className="mt-2 space-y-1.5 text-sm">
+                      {night.options.map((option) => {
+                        const stat = seenBeforeStats[option.id];
+                        if (!stat || stat.total === 0) return null;
+                        const percentage = ((stat.seenBefore / stat.total) * 100).toFixed(0);
+                        return (
+                          <div key={option.id} className="flex items-center justify-between text-[var(--ink-2)]">
+                            <span>{stat.title}</span>
+                            <span className="font-semibold text-[var(--ink-1)]">
+                              {stat.seenBefore}/{stat.total} ({percentage}%)
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </section>
             );
           }),
