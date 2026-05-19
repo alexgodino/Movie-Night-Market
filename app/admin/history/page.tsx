@@ -1,21 +1,61 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
+import { ClearArchiveHistoryForm } from "@/components/clear-archive-history-form";
+import { clearArchivedNightHistoryAction } from "@/lib/actions";
 import { getHistoryNights, getResultsForNight, getSeenBeforeStats } from "@/lib/queries";
 
-export default async function AdminHistoryPage() {
+type Props = {
+  searchParams: Promise<{
+    cleared?: string;
+  }>;
+};
+
+export default async function AdminHistoryPage({ searchParams }: Props) {
+  const params = await searchParams;
   await requireAdmin();
   const nights = await getHistoryNights();
+  const archivedNights = nights.filter((night) => night.status === "ARCHIVED");
 
   return (
     <main className="app-shell space-y-5 pb-10">
       <Link href="/admin" className="text-sm font-semibold text-[var(--ink-2)]">
-        ← Back to dashboard
+        Back to dashboard
       </Link>
       <section className="glass-panel rounded-[2rem] p-5">
         <h1 className="headline text-4xl">Movie night history</h1>
         <p className="mt-3 text-base leading-7 text-[var(--ink-2)]">
           Review past lineups, winners, and family feedback.
         </p>
+      </section>
+      {params.cleared ? (
+        <section className="section-card rounded-[2rem] border border-emerald-200 bg-emerald-50/60 p-4 text-sm font-semibold text-[var(--market-up)]">
+          Archived history cleared.
+        </section>
+      ) : null}
+      <section className="section-card space-y-3 rounded-[2rem] p-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+            Reset
+          </p>
+          <h2 className="headline mt-1 text-2xl text-[var(--ink-1)]">Clear archived history</h2>
+          <p className="mt-2 text-base leading-7 text-[var(--ink-2)]">
+            Remove past movie nights so the app stops showing previous winner context.
+          </p>
+        </div>
+        <ClearArchiveHistoryForm
+          action={clearArchivedNightHistoryAction}
+          disabled={archivedNights.length === 0}
+        />
+        {archivedNights.length === 0 ? (
+          <p className="text-sm font-semibold text-[var(--ink-2)]">
+            No archived history is stored right now.
+          </p>
+        ) : (
+          <p className="text-sm font-semibold text-[var(--ink-2)]">
+            This will remove {archivedNights.length} archived night
+            {archivedNights.length === 1 ? "" : "s"}.
+          </p>
+        )}
       </section>
       <div className="space-y-4">
         {await Promise.all(

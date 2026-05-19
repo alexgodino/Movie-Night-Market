@@ -58,7 +58,7 @@ export function VoteForm({ nightId, title, options }: Props) {
                   Option {option.position}
                 </p>
                 {option.debugSummary === "Last night's runner-up" ? (
-                  <p className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[var(--ink-2)]">
+                  <p className="mt-1 text-xs font-semibold text-[var(--ink-2)]">
                     Last night&apos;s runner-up
                   </p>
                 ) : null}

@@ -6,21 +6,20 @@ import clsx from "clsx";
 type Props = {
   title: string;
   posterUrl?: string | null;
-  compact?: boolean;
+  className?: string;
 };
 
-export function MoviePoster({ title, posterUrl, compact = false }: Props) {
+export function MoviePoster({ title, posterUrl, className }: Props) {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(posterUrl?.trim()) && !failed;
   const wrapperClass = clsx(
-    "relative w-full overflow-hidden rounded-[1.4rem] border border-[var(--line)] shadow-sm",
-    "aspect-[2/3] bg-[var(--surface-2)]",
-    compact && "max-w-28",
+    "relative block min-h-[12rem] overflow-hidden rounded-[1.4rem] border border-[var(--line)] shadow-sm",
+    className,
   );
 
   if (showImage) {
     return (
-      <div className={clsx(wrapperClass, "p-1.5")}>
+      <div className={clsx(wrapperClass, "bg-[var(--surface-2)]")}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={posterUrl?.trim()}
@@ -28,7 +27,7 @@ export function MoviePoster({ title, posterUrl, compact = false }: Props) {
           loading="lazy"
           decoding="async"
           onError={() => setFailed(true)}
-          className="h-full w-full rounded-[1.05rem] object-contain"
+          className="block h-auto w-full object-contain"
         />
       </div>
     );

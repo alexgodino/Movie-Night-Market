@@ -391,6 +391,19 @@ export async function archiveNightAction() {
   await refreshAll();
 }
 
+export async function clearArchivedNightHistoryAction() {
+  await requireAdmin();
+
+  await prisma.movieNight.deleteMany({
+    where: {
+      status: "ARCHIVED",
+    },
+  });
+
+  await refreshAll();
+  redirect("/admin/history?cleared=1");
+}
+
 export async function submitPreWatchVoteAction(
   _prevState: FormState,
   formData: FormData,

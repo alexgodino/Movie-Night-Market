@@ -48,93 +48,133 @@ type Props = {
   initialData: Payload;
 };
 
-type MovementLabel = "Underdog Run" | "Front Runner" | "Slipping" | "Quiet Climber" | "Volatile";
+type MovementLabel =
+  | "Underdog Run"
+  | "Front Runner"
+  | "Holding Steady"
+  | "Slipping"
+  | "Quiet Climber"
+  | "Volatile"
+  | "Stuck";
 
 const scoreLayoutTransition = {
   type: "spring",
-  stiffness: 220,
-  damping: 28,
-  mass: 0.8,
+  stiffness: 130,
+  damping: 24,
+  mass: 1.05,
 } as const;
 
 function getMovementTone(label: MovementLabel) {
   switch (label) {
     case "Front Runner":
-      return "border-emerald-200 bg-emerald-50 text-[var(--market-up)]";
+      return "text-[var(--market-up)]";
+    case "Holding Steady":
+      return "text-[var(--ink-2)]";
     case "Underdog Run":
     case "Quiet Climber":
-      return "border-sky-200 bg-sky-50 text-[#2a6b88]";
+      return "text-[#2a6b88]";
     case "Slipping":
-      return "border-rose-200 bg-rose-50 text-[var(--market-down)]";
+      return "text-[var(--market-down)]";
     case "Volatile":
-      return "border-amber-200 bg-amber-50 text-[#8b5a1f]";
+      return "text-[#8b5a1f]";
+    case "Stuck":
+      return "text-[var(--ink-2)]";
   }
 }
 
 function getProfileTone(label: string) {
   switch (label) {
     case "Broad Support":
-      return "border-emerald-200 bg-emerald-50 text-[var(--market-up)]";
+      return "text-[var(--market-up)]";
     case "Heavy Buzz":
-      return "border-fuchsia-200 bg-fuchsia-50 text-[#9a3f86]";
+      return "text-[#9a3f86]";
     case "Divisive":
-      return "border-amber-200 bg-amber-50 text-[#8b5a1f]";
+      return "text-[#8b5a1f]";
     case "Cold Reception":
-      return "border-rose-200 bg-rose-50 text-[var(--market-down)]";
+      return "text-[var(--market-down)]";
     case "Casual Interest":
     default:
-      return "border-[var(--line)] bg-white text-[var(--ink-2)]";
+      return "text-[var(--ink-2)]";
   }
 }
 
 function getMovementLabel(entry: ResultEntry, currentRank: number, history: number[]) {
   const openingRank = history[0] ?? entry.position;
   const previousRank = history[history.length - 1];
-  const recentRanks = [...history.slice(-3), currentRank];
-  const rankSpread = Math.max(...recentRanks) - Math.min(...recentRanks);
+  const recentRanks = [...history.slice(-4), currentRank];
   const directionChanges = recentRanks.reduce((count, rank, index, all) => {
     if (index < 2) {
       return count;
     }
 
-    const prevChange = all[index - 1] - all[index - 2];
-    const nextChange = all[index] - all[index - 1];
-    if (prevChange === 0 || nextChange === 0) {
+    const prevDelta = all[index - 1] - all[index - 2];
+    const nextDelta = all[index] - all[index - 1];
+
+    if (prevDelta === 0 || nextDelta === 0) {
       return count;
     }
 
-    return Math.sign(prevChange) !== Math.sign(nextChange) ? count + 1 : count;
+    return Math.sign(prevDelta) !== Math.sign(nextDelta) ? count + 1 : count;
   }, 0);
 
+  const netChange = openingRank - currentRank;
   const movedUpThisRefresh =
     previousRank !== undefined ? previousRank > currentRank : openingRank > currentRank;
   const movedDownThisRefresh =
     previousRank !== undefined ? previousRank < currentRank : openingRank < currentRank;
-  const netClimb = openingRank - currentRank;
-  const stableTop =
-    currentRank === 1 && (history.includes(1) || entry.position === 1 || history.length === 0);
+  const improvingTrend =
+    recentRanks.length >= 3 && recentRanks.every((rank, index, all) => index === 0 || rank <= all[index - 1]);
+  const volatile = history.length >= 3 && directionChanges >= 2;
 
-  if (stableTop) {
-    return "Front Runner";
+  if (history.length === 0) {
+    if (currentRank === 1) {
+      return "Front Runner";
+    }
+
+    if (currentRank <= 3) {
+      return "Holding Steady";
+    }
+
+    return "Stuck";
   }
 
-  if (netClimb >= 2 && currentRank <= 3 && entry.position >= 4) {
-    return "Underdog Run";
-  }
-
-  if (directionChanges >= 2 || rankSpread >= 3) {
+  if (volatile) {
     return "Volatile";
   }
 
-  if (movedUpThisRefresh || netClimb > 0) {
+  if (currentRank === 1 && previousRank === 1) {
+    return "Holding Steady";
+  }
+
+  if (openingRank >= 4 && currentRank <= 2 && netChange >= 3) {
+    return "Underdog Run";
+  }
+
+  if (openingRank >= 4 && currentRank <= 3 && netChange >= 2 && (history.length < 2 || improvingTrend)) {
     return "Quiet Climber";
   }
 
-  if (movedDownThisRefresh || netClimb < 0) {
+  if (movedDownThisRefresh && previousRank !== undefined && previousRank <= 3) {
     return "Slipping";
   }
 
-  return currentRank === 1 ? "Front Runner" : "Quiet Climber";
+  if (previousRank === currentRank) {
+    return currentRank <= 3 ? "Holding Steady" : "Stuck";
+  }
+
+  if (currentRank === 1) {
+    return "Front Runner";
+  }
+
+  if (movedUpThisRefresh) {
+    if (currentRank <= 2) {
+      return "Front Runner";
+    }
+
+    return currentRank <= 3 && netChange >= 2 ? "Quiet Climber" : "Holding Steady";
+  }
+
+  return currentRank >= 4 ? "Stuck" : "Holding Steady";
 }
 
 export function MarketBoard({ initialData }: Props) {
@@ -199,7 +239,7 @@ export function MarketBoard({ initialData }: Props) {
           scorePulseTimeoutRef.current = window.setTimeout(() => {
             setScorePulseByOption({});
             scorePulseTimeoutRef.current = null;
-          }, 850);
+          }, 1200);
         }
 
         setData(nextData);
@@ -302,7 +342,7 @@ export function MarketBoard({ initialData }: Props) {
                 layout
                 transition={scoreLayoutTransition}
                 className={clsx(
-                  "section-card rounded-[2rem] p-4 transition-[opacity,box-shadow,background-color] duration-300",
+                  "section-card rounded-[2rem] p-4 transition-[opacity,box-shadow,background-color] duration-500",
                   isWinner && [
                     "ring-2 ring-[var(--market-up)] ring-offset-2",
                     "bg-emerald-50/60",
@@ -318,9 +358,23 @@ export function MarketBoard({ initialData }: Props) {
                   </div>
                 ) : null}
 
-                <div className="flex items-start gap-4">
-                  <div className="w-24 shrink-0 sm:w-28">
-                    <MoviePoster title={entry.title} posterUrl={entry.posterUrl} compact />
+                <div className="grid gap-4 md:flex md:items-start md:gap-4">
+                  <div className="w-[7.5rem] shrink-0 space-y-2 sm:w-32 md:w-36">
+                    <MoviePoster
+                      title={entry.title}
+                      posterUrl={entry.posterUrl}
+                      className="w-full"
+                    />
+                    {entry.voteCount >= 2 ? (
+                      <div className="space-y-1 pl-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">
+                        <div className={clsx("leading-none", movementTone)}>{movementLabel}</div>
+                        <div className={clsx("leading-none", profileTone)}>{entry.profileLabel}</div>
+                      </div>
+                    ) : (
+                      <p className="pl-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-2)]">
+                        Waiting for votes
+                      </p>
+                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -330,7 +384,7 @@ export function MarketBoard({ initialData }: Props) {
                           Rank #{currentRank}
                         </p>
                         {entry.debugSummary === "Last night's runner-up" ? (
-                          <p className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[var(--ink-2)]">
+                          <p className="mt-1 text-xs font-semibold text-[var(--ink-2)]">
                             Last night&apos;s runner-up
                           </p>
                         ) : null}
@@ -343,7 +397,7 @@ export function MarketBoard({ initialData }: Props) {
                       <motion.div
                         layout
                         className={clsx(
-                          "shrink-0 rounded-2xl border px-3 py-2 text-right",
+                          "shrink-0 rounded-[1.4rem] border px-2.5 py-2 text-right",
                           pulse === "up"
                             ? "border-emerald-200 bg-emerald-50 text-[var(--market-up)]"
                             : pulse === "down"
@@ -355,41 +409,24 @@ export function MarketBoard({ initialData }: Props) {
                       >
                         <div
                           className={clsx(
-                            "text-xs uppercase tracking-[0.14em]",
+                            "text-[0.65rem] uppercase tracking-[0.14em]",
                             pulse ? "opacity-70" : "text-white/70",
                           )}
                         >
                           Score
                         </div>
-                        <div className="mt-0.5 flex items-center justify-end gap-1.5 text-2xl font-bold leading-none">
+                        <div className="mt-0.5 flex items-center justify-end gap-1 text-xl font-bold leading-none">
                           <span>{entry.score.toFixed(2)}</span>
                           {pulse === "up" ? (
-                            <ArrowUpRight className="size-3.5 shrink-0 -translate-y-0.5" />
+                            <ArrowUpRight className="size-3 shrink-0 -translate-y-0.5" />
                           ) : pulse === "down" ? (
-                            <ArrowDownRight className="size-3.5 shrink-0 -translate-y-0.5" />
+                            <ArrowDownRight className="size-3 shrink-0 -translate-y-0.5" />
                           ) : null}
                         </div>
                       </motion.div>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold">
-                      {entry.voteCount >= 2 ? (
-                        <>
-                          <span className={clsx("inline-flex items-center rounded-full border px-3 py-1", movementTone)}>
-                            {movementLabel}
-                          </span>
-                          <span className={clsx("inline-flex items-center rounded-full border px-3 py-1", profileTone)}>
-                            {entry.profileLabel}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[var(--ink-2)]">
-                          —
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
                       <div className="rounded-2xl bg-white px-3 py-3">
                         <div className="font-semibold text-[var(--ink-1)]">
                           {entry.robustAverage.toFixed(2)}

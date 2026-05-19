@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Star, Vote } from "lucide-react";
+import { PreviousNightSection } from "@/components/previous-night-section";
 import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
-import { getLastArchivedNightSummary, getViewerState } from "@/lib/queries";
+import { getLastArchivedNightSummary, getPendingRatingContext, getViewerState } from "@/lib/queries";
 
 type Props = {
   searchParams: Promise<{
@@ -14,8 +15,11 @@ export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams;
   const deviceId = await getDeviceIdFromCookie();
   await touchDeviceIdentity(deviceId);
-  const { activeNight, hasVoted, hasRatedWinner } = await getViewerState(deviceId);
-  const lastNight = await getLastArchivedNightSummary();
+  const [{ activeNight, hasVoted, hasRatedWinner }, lastNight, pendingRating] = await Promise.all([
+    getViewerState(deviceId),
+    getLastArchivedNightSummary(),
+    getPendingRatingContext(deviceId),
+  ]);
 
   if (!activeNight) {
     return (
@@ -30,22 +34,12 @@ export default async function HomePage({ searchParams }: Props) {
             this screen turns into the family voting board.
           </p>
           {lastNight ? (
-            <div className="mt-6 rounded-[1.5rem] border border-[var(--line)] bg-white/80 p-4 text-left">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-                Last time
-              </p>
-              <h2 className="headline mt-1 text-2xl text-[var(--ink-1)]">
-                {lastNight.winnerTitle}
-              </h2>
-              {lastNight.avgRating !== null ? (
-                <p className="mt-1 flex items-center gap-1.5 text-base text-[var(--ink-2)]">
-                  <Star className="size-4 fill-[var(--accent)] text-[var(--accent)]" />
-                  Average rating:{" "}
-                  <strong className="text-[var(--ink-1)]">{lastNight.avgRating.toFixed(1)}</strong>
-                </p>
-              ) : (
-                <p className="mt-1 text-base text-[var(--ink-2)]">No post-watch ratings yet.</p>
-              )}
+            <div className="mt-6">
+              <PreviousNightSection
+                nightId={lastNight.nightId}
+                winnerTitle={lastNight.winnerTitle}
+                avgRating={lastNight.avgRating}
+              />
             </div>
           ) : null}
           <Link
@@ -88,7 +82,10 @@ export default async function HomePage({ searchParams }: Props) {
     );
   }
 
-  const canStartVoting = activeNight.status === "VOTING_OPEN" && !hasVoted;
+  const showRatingGate = Boolean(
+    pendingRating && activeNight.status === "VOTING_OPEN" && !hasVoted,
+  );
+  const canStartVoting = activeNight.status === "VOTING_OPEN" && !hasVoted && !showRatingGate;
 
   return (
     <main className="app-shell space-y-5 pb-10">
@@ -114,34 +111,39 @@ export default async function HomePage({ searchParams }: Props) {
         </div>
 
         <p className="text-lg leading-8 text-[var(--ink-2)]">
-          {canStartVoting
-            ? "Tonight's five picks are ready. Rate them all from 1 to 5 and the live leaderboard unlocks once your ballot is in."
-            : hasVoted
-              ? "Your ballot is in. Follow the live leaderboard to see how the group rankings move."
-              : "Voting is not open right now. Check back once the admin opens tonight's ballot."}
+          {showRatingGate
+            ? `Finish rating ${pendingRating?.winnerTitle ?? "last night's winner"} before you vote tonight.`
+            : canStartVoting
+              ? "Tonight's five picks are ready. Rate them all from 1 to 5 and the live leaderboard unlocks once your ballot is in."
+              : hasVoted
+                ? "Your ballot is in. Follow the live leaderboard to see how the group rankings move."
+                : "Voting is not open right now. Check back once the admin opens tonight's ballot."}
         </p>
 
-        {lastNight ? (
-          <div className="rounded-[1.5rem] border border-[var(--line)] bg-white/85 p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-              Last time
-            </p>
-            <h2 className="headline mt-1 text-2xl text-[var(--ink-1)]">
-              {lastNight.winnerTitle}
-            </h2>
-            {lastNight.avgRating !== null ? (
-              <p className="mt-1 flex items-center gap-1.5 text-base text-[var(--ink-2)]">
-                <Star className="size-4 fill-[var(--accent)] text-[var(--accent)]" />
-                Average rating:{" "}
-                <strong className="text-[var(--ink-1)]">{lastNight.avgRating.toFixed(1)}</strong>
-              </p>
-            ) : (
-              <p className="mt-1 text-base text-[var(--ink-2)]">No post-watch ratings yet.</p>
-            )}
-          </div>
+        {showRatingGate && pendingRating ? (
+          <PreviousNightSection
+            nightId={pendingRating.nightId}
+            winnerTitle={pendingRating.winnerTitle}
+            avgRating={pendingRating.avgRating}
+            prompt
+          />
+        ) : lastNight ? (
+          <PreviousNightSection
+            nightId={lastNight.nightId}
+            winnerTitle={lastNight.winnerTitle}
+            avgRating={lastNight.avgRating}
+          />
         ) : null}
 
-        {canStartVoting ? (
+        {showRatingGate && pendingRating ? (
+          <Link
+            href={`/rate?nightId=${pendingRating.nightId}`}
+            className="tap-button inline-flex w-full items-center justify-center gap-2 bg-[var(--accent)] text-lg text-white"
+          >
+            <Star className="size-5" />
+            Rate last night&apos;s movie
+          </Link>
+        ) : canStartVoting ? (
           <Link
             href="/vote"
             className="tap-button inline-flex w-full items-center justify-center gap-2 bg-[var(--accent)] text-lg text-white"

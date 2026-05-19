@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { VoteForm } from "@/components/vote-form";
+import { PreviousNightSection } from "@/components/previous-night-section";
 import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
-import { getViewerState } from "@/lib/queries";
+import { getPendingRatingContext, getViewerState } from "@/lib/queries";
 
 export default async function VotePage() {
   const deviceId = await getDeviceIdFromCookie();
   await touchDeviceIdentity(deviceId);
-  const { activeNight, hasVoted } = await getViewerState(deviceId);
+  const [{ activeNight, hasVoted }, pendingRating] = await Promise.all([
+    getViewerState(deviceId),
+    getPendingRatingContext(deviceId),
+  ]);
 
   if (!activeNight) {
     return (
@@ -41,6 +45,19 @@ export default async function VotePage() {
             Back home
           </Link>
         </section>
+      </main>
+    );
+  }
+
+  if (pendingRating) {
+    return (
+      <main className="app-shell space-y-5 pb-10">
+        <PreviousNightSection
+          nightId={pendingRating.nightId}
+          winnerTitle={pendingRating.winnerTitle}
+          avgRating={pendingRating.avgRating}
+          prompt
+        />
       </main>
     );
   }
