@@ -83,7 +83,7 @@ export default async function HomePage({ searchParams }: Props) {
   }
 
   const showRatingGate = Boolean(
-    pendingRating && activeNight.status === "VOTING_OPEN" && !hasVoted,
+    pendingRating && !pendingRating.hasRated && activeNight.status === "VOTING_OPEN" && !hasVoted,
   );
   const canStartVoting = activeNight.status === "VOTING_OPEN" && !hasVoted && !showRatingGate;
 

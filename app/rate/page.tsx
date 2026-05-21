@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { PostWatchForm } from "@/components/post-watch-form";
 import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
@@ -94,6 +95,15 @@ export default async function RatePage({ searchParams }: Props) {
 
   // ── Already rated: render the hard endpoint ──────────────────────────────
   if (hasRated) {
+    const viewerState = await getViewerState(deviceId);
+    if (
+      targetNight.status === "ARCHIVED" &&
+      viewerState.activeNight?.status === "VOTING_OPEN" &&
+      !viewerState.hasVoted
+    ) {
+      redirect("/vote");
+    }
+
     return <AllDoneScreen movieTitle={targetNight.winnerMovie.title} />;
   }
 

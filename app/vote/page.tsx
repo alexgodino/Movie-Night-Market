@@ -49,7 +49,7 @@ export default async function VotePage() {
     );
   }
 
-  if (pendingRating) {
+  if (pendingRating && !pendingRating.hasRated) {
     return (
       <main className="app-shell space-y-5 pb-10">
         <PreviousNightSection

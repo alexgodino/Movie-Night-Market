@@ -597,8 +597,13 @@ export async function submitPostWatchRatingAction(
   });
 
   await refreshAll();
-  // For archived nights (rated from the home page inter-night flow), go back home
+  // Previous-night ratings should resume the current ballot instead of ending the flow.
   if (night.status === "ARCHIVED") {
+    const activeNight = await getActiveNight();
+    if (activeNight?.status === "VOTING_OPEN") {
+      redirect("/vote?prevRated=1");
+    }
+
     redirect("/?prevRated=1");
   }
   redirect("/rate?submitted=1");
