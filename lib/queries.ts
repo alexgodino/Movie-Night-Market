@@ -277,6 +277,7 @@ export async function getPendingRatingContext(deviceKey: string) {
   return {
     nightId: lastNight.id,
     winnerTitle: lastNight.winnerMovie?.title ?? "Last night's movie",
+    winnerPosterUrl: lastNight.winnerMovie?.posterUrl ?? null,
     avgRating,
     hasRated: Boolean(existingRating),
   };

@@ -125,6 +125,9 @@ function getMovementLabel(entry: ResultEntry, currentRank: number, history: numb
   const improvingTrend =
     recentRanks.length >= 3 && recentRanks.every((rank, index, all) => index === 0 || rank <= all[index - 1]);
   const volatile = history.length >= 3 && directionChanges >= 2;
+  const nearTop = currentRank <= 2;
+  const nearBottom = currentRank >= 4;
+  const wasNearBottom = openingRank >= 4;
 
   if (history.length === 0) {
     if (currentRank === 1) {
@@ -138,6 +141,10 @@ function getMovementLabel(entry: ResultEntry, currentRank: number, history: numb
     return "Stuck";
   }
 
+  if (nearBottom && previousRank !== undefined && previousRank >= 4 && netChange <= 0) {
+    return "Stuck";
+  }
+
   if (volatile) {
     return "Volatile";
   }
@@ -146,11 +153,11 @@ function getMovementLabel(entry: ResultEntry, currentRank: number, history: numb
     return "Holding Steady";
   }
 
-  if (openingRank >= 4 && currentRank <= 2 && netChange >= 3) {
+  if (wasNearBottom && nearTop && netChange >= 3) {
     return "Underdog Run";
   }
 
-  if (openingRank >= 4 && currentRank <= 3 && netChange >= 2 && (history.length < 2 || improvingTrend)) {
+  if (wasNearBottom && currentRank <= 3 && netChange >= 2 && movedUpThisRefresh && improvingTrend) {
     return "Quiet Climber";
   }
 
@@ -159,7 +166,7 @@ function getMovementLabel(entry: ResultEntry, currentRank: number, history: numb
   }
 
   if (previousRank === currentRank) {
-    return currentRank <= 3 ? "Holding Steady" : "Stuck";
+    return nearTop ? "Front Runner" : currentRank === 3 ? "Holding Steady" : "Stuck";
   }
 
   if (currentRank === 1) {
@@ -167,14 +174,14 @@ function getMovementLabel(entry: ResultEntry, currentRank: number, history: numb
   }
 
   if (movedUpThisRefresh) {
-    if (currentRank <= 2) {
+    if (nearTop) {
       return "Front Runner";
     }
 
-    return currentRank <= 3 && netChange >= 2 ? "Quiet Climber" : "Holding Steady";
+    return currentRank === 3 && netChange >= 2 ? "Quiet Climber" : "Holding Steady";
   }
 
-  return currentRank >= 4 ? "Stuck" : "Holding Steady";
+  return nearBottom ? "Stuck" : "Holding Steady";
 }
 
 export function MarketBoard({ initialData }: Props) {
@@ -358,12 +365,13 @@ export function MarketBoard({ initialData }: Props) {
                   </div>
                 ) : null}
 
-                <div className="grid gap-4 md:flex md:items-start md:gap-4">
-                  <div className="w-[7.5rem] shrink-0 space-y-2 sm:w-32 md:w-36">
+                <div className="grid grid-cols-[7.25rem_minmax(0,1fr)] gap-x-3 gap-y-3 sm:grid-cols-[8rem_minmax(0,1fr)] md:flex md:items-start md:gap-4">
+                  <div className="shrink-0 space-y-2 md:w-36">
                     <MoviePoster
                       title={entry.title}
                       posterUrl={entry.posterUrl}
                       className="w-full"
+                      bare
                     />
                     {entry.voteCount >= 2 ? (
                       <div className="space-y-1 pl-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">
@@ -397,7 +405,7 @@ export function MarketBoard({ initialData }: Props) {
                       <motion.div
                         layout
                         className={clsx(
-                          "shrink-0 rounded-[1.4rem] border px-2.5 py-2 text-right",
+                          "shrink-0 rounded-[1.15rem] border px-2.5 py-2 text-right sm:rounded-[1.4rem]",
                           pulse === "up"
                             ? "border-emerald-200 bg-emerald-50 text-[var(--market-up)]"
                             : pulse === "down"
@@ -413,7 +421,7 @@ export function MarketBoard({ initialData }: Props) {
                             pulse ? "opacity-70" : "text-white/70",
                           )}
                         >
-                          Score
+                          #{currentRank} Score
                         </div>
                         <div className="mt-0.5 flex items-center justify-end gap-1 text-xl font-bold leading-none">
                           <span>{entry.score.toFixed(2)}</span>
@@ -426,20 +434,20 @@ export function MarketBoard({ initialData }: Props) {
                       </motion.div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
-                      <div className="rounded-2xl bg-white px-3 py-3">
+                    <div className="mt-3 grid grid-cols-3 gap-1.5 text-center text-xs sm:gap-2 sm:text-sm">
+                      <div className="rounded-xl bg-white px-2 py-2 sm:rounded-2xl sm:px-3 sm:py-3">
                         <div className="font-semibold text-[var(--ink-1)]">
                           {entry.robustAverage.toFixed(2)}
                         </div>
                         <div className="text-[var(--ink-2)]">Avg</div>
                       </div>
-                      <div className="rounded-2xl bg-white px-3 py-3">
+                      <div className="rounded-xl bg-white px-2 py-2 sm:rounded-2xl sm:px-3 sm:py-3">
                         <div className="font-semibold text-[var(--ink-1)]">
                           {entry.ratingCounts.five}
                         </div>
                         <div className="text-[var(--ink-2)]">5★</div>
                       </div>
-                      <div className="rounded-2xl bg-white px-3 py-3">
+                      <div className="rounded-xl bg-white px-2 py-2 sm:rounded-2xl sm:px-3 sm:py-3">
                         <div className="font-semibold text-[var(--ink-1)]">{entry.ratingCounts.one}</div>
                         <div className="text-[var(--ink-2)]">1★</div>
                       </div>

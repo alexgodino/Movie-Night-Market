@@ -141,7 +141,11 @@ export default async function RatePage({ searchParams }: Props) {
 
   return (
     <main className="app-shell space-y-5 pb-10">
-      <PostWatchForm nightId={targetNight.id} movieTitle={targetNight.winnerMovie.title} />
+      <PostWatchForm
+        nightId={targetNight.id}
+        movieTitle={targetNight.winnerMovie.title}
+        posterUrl={targetNight.winnerMovie.posterUrl}
+      />
     </main>
   );
 }

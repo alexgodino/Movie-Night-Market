@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import { LiveVoteCount } from "@/components/live-vote-count";
 import { MarketBoard } from "@/components/market-board";
 import { TieBreakForm } from "@/components/tie-break-form";
 import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
@@ -98,11 +99,7 @@ export default async function ResultsPage({ searchParams }: Props) {
         </p>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="headline text-5xl">Tonight&apos;s Standings</h1>
-          {totalVotes > 0 && (
-            <span className="text-sm font-semibold text-[var(--ink-2)]">
-              • {totalVotes} {totalVotes === 1 ? "Vote" : "Votes"}
-            </span>
-          )}
+          <LiveVoteCount nightId={activeNight.id} initialCount={totalVotes} />
         </div>
         <p className="mt-3 text-base leading-7 text-[var(--ink-2)]">
           Rankings update every few seconds. Scores favor movies the whole group can enjoy.

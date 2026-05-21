@@ -7,19 +7,21 @@ type Props = {
   title: string;
   posterUrl?: string | null;
   className?: string;
+  bare?: boolean;
 };
 
-export function MoviePoster({ title, posterUrl, className }: Props) {
+export function MoviePoster({ title, posterUrl, className, bare = false }: Props) {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(posterUrl?.trim()) && !failed;
   const wrapperClass = clsx(
-    "relative block min-h-[12rem] overflow-hidden rounded-[1.4rem] border border-[var(--line)] shadow-sm",
+    "relative block min-h-[12rem] overflow-hidden rounded-[1.4rem]",
+    bare ? "shadow-none" : "border border-[var(--line)] shadow-sm",
     className,
   );
 
   if (showImage) {
     return (
-      <div className={clsx(wrapperClass, "bg-[var(--surface-2)]")}>
+      <div className={clsx(wrapperClass, !bare && "bg-[var(--surface-2)]")}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={posterUrl?.trim()}

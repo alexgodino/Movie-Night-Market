@@ -2,32 +2,34 @@
 
 import { useActionState } from "react";
 import { Star } from "lucide-react";
+import { MoviePoster } from "@/components/movie-poster";
 import type { FormState } from "@/lib/actions";
 import { submitPostWatchRatingAction } from "@/lib/actions";
 
 type Props = {
   nightId: string;
   movieTitle: string;
+  posterUrl?: string | null;
 };
 
 const starSteps = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
 const initialState: FormState = {};
 
-export function PostWatchForm({ nightId, movieTitle }: Props) {
+export function PostWatchForm({ nightId, movieTitle, posterUrl }: Props) {
   const [state, action, pending] = useActionState(submitPostWatchRatingAction, initialState);
 
   return (
     <form action={action} className="space-y-5">
       <input type="hidden" name="nightId" value={nightId} />
 
-      <section className="glass-panel rounded-[1.5rem] p-5">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--accent-strong)]">
+      <section className="glass-panel rounded-[1.5rem] p-5 text-center">
+        <div className="mx-auto w-40 max-w-[62vw]">
+          <MoviePoster title={movieTitle} posterUrl={posterUrl} className="w-full" bare />
+        </div>
+        <p className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-[var(--accent-strong)]">
           Post-watch rating
         </p>
         <h1 className="headline mt-2 text-4xl leading-tight text-[var(--ink-1)]">{movieTitle}</h1>
-        <p className="mt-3 text-base leading-7 text-[var(--ink-2)]">
-          How was it? Pick a star rating and you&apos;re done.
-        </p>
       </section>
 
       <section className="section-card rounded-[1.5rem] p-5">

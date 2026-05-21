@@ -112,7 +112,7 @@ export default async function HomePage({ searchParams }: Props) {
 
         <p className="text-lg leading-8 text-[var(--ink-2)]">
           {showRatingGate
-            ? `Finish rating ${pendingRating?.winnerTitle ?? "last night's winner"} before you vote tonight.`
+            ? "One quick rating unlocks tonight's ballot."
             : canStartVoting
               ? "Tonight's five picks are ready. Rate them all from 1 to 5 and the live leaderboard unlocks once your ballot is in."
               : hasVoted
@@ -124,6 +124,7 @@ export default async function HomePage({ searchParams }: Props) {
           <PreviousNightSection
             nightId={pendingRating.nightId}
             winnerTitle={pendingRating.winnerTitle}
+            posterUrl={pendingRating.winnerPosterUrl}
             avgRating={pendingRating.avgRating}
             prompt
           />
