@@ -18,8 +18,7 @@ export default async function ResultsPage({ searchParams }: Props) {
   const params = await searchParams;
   const deviceId = await getDeviceIdFromCookie();
   await touchDeviceIdentity(deviceId);
-  const { activeNight, hasVoted, hasRatedWinner, hasTieBreakVoted } =
-    await getViewerState(deviceId);
+  const { activeNight, hasVoted, hasTieBreakVoted } = await getViewerState(deviceId);
 
   if (!activeNight) {
     return (
@@ -53,7 +52,7 @@ export default async function ResultsPage({ searchParams }: Props) {
   // ── Post-watch phase: push the user to the rating flow / hard endpoint ──
   // Once the movie is watched, we stop showing the market board entirely.
   if (activeNight.status === "POST_WATCH_OPEN") {
-    redirect(hasRatedWinner ? "/" : "/rate");
+    redirect("/");
   }
 
   const results = await getResultsForNight(activeNight);
@@ -71,7 +70,7 @@ export default async function ResultsPage({ searchParams }: Props) {
             <div>
               <h2 className="headline text-2xl text-[var(--ink-1)]">You&apos;re all set for tonight.</h2>
               <p className="mt-1 text-base leading-7 text-[var(--ink-2)]">
-                Come back after the movie to leave a final rating.
+                Follow the live board while everyone&apos;s ballots come in.
               </p>
             </div>
           </div>

@@ -1,24 +1,15 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { CheckCircle2, Star, Vote } from "lucide-react";
+import { Vote } from "lucide-react";
 import { PreviousNightSection } from "@/components/previous-night-section";
 import { getDeviceIdFromCookie, touchDeviceIdentity } from "@/lib/device";
-import { getLastArchivedNightSummary, getPendingRatingContext, getViewerState } from "@/lib/queries";
+import { getLastArchivedNightSummary, getViewerState } from "@/lib/queries";
 
-type Props = {
-  searchParams: Promise<{
-    prevRated?: string;
-  }>;
-};
-
-export default async function HomePage({ searchParams }: Props) {
-  const params = await searchParams;
+export default async function HomePage() {
   const deviceId = await getDeviceIdFromCookie();
   await touchDeviceIdentity(deviceId);
-  const [{ activeNight, hasVoted, hasRatedWinner }, lastNight, pendingRating] = await Promise.all([
+  const [{ activeNight, hasVoted }, lastNight] = await Promise.all([
     getViewerState(deviceId),
     getLastArchivedNightSummary(),
-    getPendingRatingContext(deviceId),
   ]);
 
   if (!activeNight) {
@@ -38,7 +29,7 @@ export default async function HomePage({ searchParams }: Props) {
               <PreviousNightSection
                 nightId={lastNight.nightId}
                 winnerTitle={lastNight.winnerTitle}
-                avgRating={lastNight.avgRating}
+                posterUrl={lastNight.winnerPosterUrl}
               />
             </div>
           ) : null}
@@ -53,53 +44,10 @@ export default async function HomePage({ searchParams }: Props) {
     );
   }
 
-  if (activeNight.status === "POST_WATCH_OPEN") {
-    if (!hasRatedWinner) {
-      redirect("/rate");
-    }
-
-    return (
-      <main className="app-shell flex items-center">
-        <section className="glass-panel w-full rounded-[2rem] p-8 text-center space-y-4">
-          <CheckCircle2 className="mx-auto size-12 text-[var(--market-up)]" />
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-              All done
-            </p>
-            <h1 className="headline mt-2 text-4xl text-[var(--ink-1)]">
-              You&apos;re all set for tonight.
-            </h1>
-          </div>
-          <p className="text-lg leading-8 text-[var(--ink-2)]">
-            Thanks for rating{" "}
-            <strong className="text-[var(--ink-1)]">
-              {activeNight.winnerMovie?.title ?? "tonight's pick"}
-            </strong>
-            . See you at the next movie night.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
-  const showRatingGate = Boolean(
-    pendingRating && !pendingRating.hasRated && activeNight.status === "VOTING_OPEN" && !hasVoted,
-  );
-  const canStartVoting = activeNight.status === "VOTING_OPEN" && !hasVoted && !showRatingGate;
+  const canStartVoting = activeNight.status === "VOTING_OPEN" && !hasVoted;
 
   return (
     <main className="app-shell space-y-5 pb-10">
-      {params.prevRated ? (
-        <section className="section-card rounded-[2rem] border border-emerald-200 bg-emerald-50/60 p-4">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-5 shrink-0 text-[var(--market-up)]" />
-            <p className="text-sm font-semibold text-[var(--ink-1)]">
-              Last night&apos;s rating saved. Thanks!
-            </p>
-          </div>
-        </section>
-      ) : null}
-
       <section className="glass-panel rounded-[2rem] p-8 text-center space-y-5">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
@@ -111,40 +59,22 @@ export default async function HomePage({ searchParams }: Props) {
         </div>
 
         <p className="text-lg leading-8 text-[var(--ink-2)]">
-          {showRatingGate
-            ? "One quick rating unlocks tonight's ballot."
-            : canStartVoting
+          {canStartVoting
               ? "Tonight's five picks are ready. Rate them all from 1 to 5 and the live leaderboard unlocks once your ballot is in."
               : hasVoted
                 ? "Your ballot is in. Follow the live leaderboard to see how the group rankings move."
                 : "Voting is not open right now. Check back once the admin opens tonight's ballot."}
         </p>
 
-        {showRatingGate && pendingRating ? (
-          <PreviousNightSection
-            nightId={pendingRating.nightId}
-            winnerTitle={pendingRating.winnerTitle}
-            posterUrl={pendingRating.winnerPosterUrl}
-            avgRating={pendingRating.avgRating}
-            prompt
-          />
-        ) : lastNight ? (
+        {lastNight ? (
           <PreviousNightSection
             nightId={lastNight.nightId}
             winnerTitle={lastNight.winnerTitle}
-            avgRating={lastNight.avgRating}
+            posterUrl={lastNight.winnerPosterUrl}
           />
         ) : null}
 
-        {showRatingGate && pendingRating ? (
-          <Link
-            href={`/rate?nightId=${pendingRating.nightId}`}
-            className="tap-button inline-flex w-full items-center justify-center gap-2 bg-[var(--accent)] text-lg text-white"
-          >
-            <Star className="size-5" />
-            Rate last night&apos;s movie
-          </Link>
-        ) : canStartVoting ? (
+        {canStartVoting ? (
           <Link
             href="/vote"
             className="tap-button inline-flex w-full items-center justify-center gap-2 bg-[var(--accent)] text-lg text-white"

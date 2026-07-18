@@ -1,6 +1,6 @@
 # Movie Night Market
 
-Movie Night Market is a phone-first family voting app for choosing one movie from five manually entered options. It supports anonymous device voting, one ballot per device per movie night, live results, admin controls, manual poster URLs/uploads, and post-watch ratings.
+Movie Night Market is a phone-first family voting app for choosing one movie from five manually entered options. It supports anonymous device voting, one ballot per device per movie night, live results, admin controls, and manual poster URLs/uploads.
 
 ## Stack
 
@@ -131,15 +131,15 @@ Push to your GitHub branch and Render will rebuild and redeploy automatically. T
 - Default passcode: `popcorn`
 - Change it with `ADMIN_PASSCODE`
 
-Admin can create one active movie night at a time, enter exactly five movie options, paste poster URLs, upload poster images, open/close voting, reveal the winner, open post-watch ratings, and archive the night.
+Admin can create one active movie night at a time, enter exactly five movie options, paste poster URLs, upload poster images, close voting, reveal the winner, and archive the night.
 
 ## Phone Testing
 
 Before sharing broadly, test these on a real phone browser:
 
 1. Create a movie night in admin.
-2. Open voting.
+2. Confirm voting is open immediately.
 3. Tap all five vote rating controls and submit.
 4. Confirm the same phone cannot vote twice.
-5. Reveal a winner and open post-watch ratings.
-6. Tap a post-watch rating and submit.
+5. Reveal a winner.
+6. Archive the night and confirm the last winner poster appears on the idle home screen.

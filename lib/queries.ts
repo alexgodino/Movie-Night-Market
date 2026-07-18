@@ -162,7 +162,6 @@ export async function getViewerState(deviceKey: string) {
     return {
       activeNight: null,
       hasVoted: false,
-      hasRatedWinner: false,
       hasTieBreakVoted: false,
       viewerVoteId: null as string | null,
     };
@@ -171,14 +170,9 @@ export async function getViewerState(deviceKey: string) {
   const vote = activeNight.preWatchVotes.find(
     (entry) => entry.deviceIdentity.deviceKey === deviceKey,
   );
-  const rating = activeNight.postWatchRatings.find(
-    (entry) => entry.deviceIdentityId === vote?.deviceIdentityId,
-  );
-
   return {
     activeNight,
     hasVoted: Boolean(vote),
-    hasRatedWinner: Boolean(rating),
     hasTieBreakVoted: activeNight.tieBreakVotes.some(
       (entry) => entry.deviceIdentity.deviceKey === deviceKey,
     ),
@@ -215,25 +209,15 @@ export async function getLastArchivedNightSummary() {
     orderBy: { createdAt: "desc" },
     include: {
       winnerMovie: true,
-      postWatchRatings: {
-        select: postWatchRatingSelect,
-      },
     },
   });
 
   if (!lastNight) return null;
 
-  const avgRating =
-    lastNight.postWatchRatings.length > 0
-      ? lastNight.postWatchRatings.reduce((sum, r) => sum + r.ratingValue, 0) /
-        lastNight.postWatchRatings.length
-      : null;
-
   return {
     nightId: lastNight.id,
     winnerTitle: lastNight.winnerMovie?.title ?? "Last night's movie",
-    avgRating,
-    ratingCount: lastNight.postWatchRatings.length,
+    winnerPosterUrl: lastNight.winnerMovie?.posterUrl ?? null,
   };
 }
 
@@ -245,44 +229,6 @@ export async function getLastArchivedNightSummary() {
  * Also returns the average post-watch rating from everyone else so we can
  * show "Last night: [Movie] — avg 3.8 ★" even if the user already rated.
  */
-export async function getPendingRatingContext(deviceKey: string) {
-  // Find the most recently archived night that had a winner
-  const lastNight = await prisma.movieNight.findFirst({
-    where: {
-      status: "ARCHIVED",
-      winnerMovieId: { not: null },
-    },
-    orderBy: { createdAt: "desc" },
-    include: nightInclude,
-  });
-
-  if (!lastNight) return null;
-
-  // Only relevant if this device voted in it
-  const vote = lastNight.preWatchVotes.find(
-    (v) => v.deviceIdentity.deviceKey === deviceKey,
-  );
-  if (!vote) return null;
-
-  const existingRating = lastNight.postWatchRatings.find(
-    (r) => r.deviceIdentityId === vote.deviceIdentityId,
-  );
-
-  const avgRating =
-    lastNight.postWatchRatings.length > 0
-      ? lastNight.postWatchRatings.reduce((sum, r) => sum + r.ratingValue, 0) /
-        lastNight.postWatchRatings.length
-      : null;
-
-  return {
-    nightId: lastNight.id,
-    winnerTitle: lastNight.winnerMovie?.title ?? "Last night's movie",
-    winnerPosterUrl: lastNight.winnerMovie?.posterUrl ?? null,
-    avgRating,
-    hasRated: Boolean(existingRating),
-  };
-}
-
 export function getNightStatusCopy(status: MovieNightStatus) {
   switch (status) {
     case "DRAFT":
@@ -294,9 +240,9 @@ export function getNightStatusCopy(status: MovieNightStatus) {
     case "TIE_BREAK_OPEN":
       return "A tie-break vote is open.";
     case "WINNER_REVEALED":
-      return "The movie is picked. Ratings will open after the watch.";
+      return "The movie is picked.";
     case "POST_WATCH_OPEN":
-      return "Post-watch ratings are open.";
+      return "The movie has been watched.";
     case "ARCHIVED":
       return "This movie night has been archived.";
     default:

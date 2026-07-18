@@ -27,7 +27,6 @@ async function refreshAll() {
   revalidatePath("/");
   revalidatePath("/vote");
   revalidatePath("/results");
-  revalidatePath("/rate");
   revalidatePath("/admin");
   revalidatePath("/admin/create");
   revalidatePath("/admin/history");
@@ -210,7 +209,8 @@ export async function createMovieNightAction(
     data: {
       title,
       slug: nightSlug,
-      status: "DRAFT",
+      status: "VOTING_OPEN",
+      openedVotingAt: new Date(),
       votingEndsAt: closesAtRaw ? new Date(closesAtRaw) : null,
       options: {
         create: [
@@ -355,24 +355,6 @@ export async function revealWinnerAction() {
   await refreshAll();
 }
 
-export async function openPostWatchRatingsAction() {
-  await requireAdmin();
-  const night = await getActiveNight();
-  if (!night?.winnerMovieId) {
-    return;
-  }
-
-  await prisma.movieNight.update({
-    where: { id: night.id },
-    data: {
-      status: "POST_WATCH_OPEN",
-      postWatchOpenedAt: new Date(),
-    },
-  });
-
-  await refreshAll();
-}
-
 export async function archiveNightAction() {
   await requireAdmin();
   const night = await getActiveNight();
@@ -402,6 +384,25 @@ export async function clearArchivedNightHistoryAction() {
 
   await refreshAll();
   redirect("/admin/history?cleared=1");
+}
+
+export async function deleteArchivedNightAction(formData: FormData) {
+  await requireAdmin();
+
+  const nightId = String(formData.get("nightId") ?? "");
+  if (!nightId) {
+    return;
+  }
+
+  await prisma.movieNight.deleteMany({
+    where: {
+      id: nightId,
+      status: "ARCHIVED",
+    },
+  });
+
+  await refreshAll();
+  redirect("/admin/history?deleted=1");
 }
 
 export async function submitPreWatchVoteAction(
@@ -546,65 +547,4 @@ export async function submitTieBreakVoteAction(
 
   await refreshAll();
   redirect("/results?tiebreak=1");
-}
-
-export async function submitPostWatchRatingAction(
-  _prevState: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const nightId = String(formData.get("nightId") ?? "");
-  const deviceId = String(formData.get("deviceId") ?? "") || (await getDeviceIdFromCookie());
-  const ratingValue = Number(formData.get("ratingValue"));
-
-  if (!nightId || !deviceId) {
-    return { error: "Missing device identity. Refresh and try again." };
-  }
-
-  if (!Number.isFinite(ratingValue) || ratingValue < 0.5 || ratingValue > 5) {
-    return { error: "Pick a rating from 0.5 to 5 stars." };
-  }
-
-  const night = await prisma.movieNight.findUnique({
-    where: { id: nightId },
-  });
-
-  // Allow rating for the active post-watch window OR recently archived nights
-  const rateableStatuses = ["POST_WATCH_OPEN", "ARCHIVED"];
-  if (!night || !rateableStatuses.includes(night.status) || !night.winnerMovieId) {
-    return { error: "Post-watch ratings are not open yet." };
-  }
-
-  const device = await touchDeviceIdentity(deviceId);
-  if (!device) {
-    return { error: "Could not verify your device." };
-  }
-
-  await prisma.postWatchRating.upsert({
-    where: {
-      movieNightId_deviceIdentityId: {
-        movieNightId: night.id,
-        deviceIdentityId: device.id,
-      },
-    },
-    update: {
-      ratingValue,
-    },
-    create: {
-      movieNightId: night.id,
-      deviceIdentityId: device.id,
-      ratingValue,
-    },
-  });
-
-  await refreshAll();
-  // Previous-night ratings should resume the current ballot instead of ending the flow.
-  if (night.status === "ARCHIVED") {
-    const activeNight = await getActiveNight();
-    if (activeNight?.status === "VOTING_OPEN") {
-      redirect("/vote?prevRated=1");
-    }
-
-    redirect("/?prevRated=1");
-  }
-  redirect("/rate?submitted=1");
 }

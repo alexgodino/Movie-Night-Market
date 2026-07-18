@@ -4,8 +4,6 @@ import {
   archiveNightAction,
   closeVotingAction,
   logoutAdminAction,
-  openPostWatchRatingsAction,
-  openVotingAction,
   revealWinnerAction,
 } from "@/lib/actions";
 import { requireAdmin } from "@/lib/auth";
@@ -72,11 +70,6 @@ export default async function AdminDashboardPage() {
               </strong>
             </p>
             <div className="mt-5 grid gap-3">
-              <form action={openVotingAction}>
-                <button className="tap-button w-full bg-[var(--surface-4)] text-white">
-                  Open voting
-                </button>
-              </form>
               <form action={closeVotingAction}>
                 <button className="tap-button w-full border border-[var(--line)] bg-white text-[var(--ink-1)]">
                   Close voting
@@ -85,11 +78,6 @@ export default async function AdminDashboardPage() {
               <form action={revealWinnerAction}>
                 <button className="tap-button w-full border border-[var(--line)] bg-white text-[var(--ink-1)]">
                   Reveal winner
-                </button>
-              </form>
-              <form action={openPostWatchRatingsAction}>
-                <button className="tap-button w-full border border-[var(--line)] bg-white text-[var(--ink-1)]">
-                  Open post-watch ratings
                 </button>
               </form>
               <form action={archiveNightAction}>

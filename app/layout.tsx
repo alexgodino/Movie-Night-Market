@@ -7,7 +7,7 @@ import { DEVICE_COOKIE_NAME } from "@/lib/constants";
 export const metadata: Metadata = {
   title: "Movie Night Market",
   description:
-    "A phone-first family movie picker with anonymous voting, live results, and post-watch ratings.",
+    "A phone-first family movie picker with anonymous voting, live results, and admin controls.",
 };
 
 // Explicit viewport declaration. Without this, some mobile browsers render

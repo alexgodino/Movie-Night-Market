@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { ClearArchiveHistoryForm } from "@/components/clear-archive-history-form";
-import { clearArchivedNightHistoryAction } from "@/lib/actions";
+import { DeleteArchivedNightForm } from "@/components/delete-archived-night-form";
+import { clearArchivedNightHistoryAction, deleteArchivedNightAction } from "@/lib/actions";
 import { getHistoryNights, getResultsForNight, getSeenBeforeStats } from "@/lib/queries";
 
 type Props = {
   searchParams: Promise<{
     cleared?: string;
+    deleted?: string;
   }>;
 };
 
@@ -30,6 +32,11 @@ export default async function AdminHistoryPage({ searchParams }: Props) {
       {params.cleared ? (
         <section className="section-card rounded-[2rem] border border-emerald-200 bg-emerald-50/60 p-4 text-sm font-semibold text-[var(--market-up)]">
           Archived history cleared.
+        </section>
+      ) : null}
+      {params.deleted ? (
+        <section className="section-card rounded-[2rem] border border-emerald-200 bg-emerald-50/60 p-4 text-sm font-semibold text-[var(--market-up)]">
+          Archived movie night deleted.
         </section>
       ) : null}
       <section className="section-card space-y-3 rounded-[2rem] p-5">
@@ -66,14 +73,6 @@ export default async function AdminHistoryPage({ searchParams }: Props) {
               night.runnerUpMovie?.title ??
               results.find((result) => result.movieId !== night.winnerMovieId)?.title ??
               "n/a";
-            const averagePostWatch =
-              night.postWatchRatings.length > 0
-                ? (
-                    night.postWatchRatings.reduce((sum, entry) => sum + entry.ratingValue, 0) /
-                    night.postWatchRatings.length
-                  ).toFixed(1)
-                : "n/a";
-
             const seenBeforeStats = getSeenBeforeStats(night);
             const hasSeenBeforeData = Object.values(seenBeforeStats).some((stat) => stat.total > 0);
 
@@ -83,7 +82,7 @@ export default async function AdminHistoryPage({ searchParams }: Props) {
                   {night.status.replaceAll("_", " ").toLowerCase()}
                 </p>
                 <h2 className="headline mt-2 text-3xl">{night.title}</h2>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-center text-sm">
+                <div className="mt-4 grid grid-cols-1 gap-3 text-center text-sm sm:grid-cols-3">
                   <div className="rounded-2xl bg-white px-3 py-3">
                     <div className="font-bold text-[var(--ink-1)]">{night.preWatchVotes.length}</div>
                     <div className="text-[var(--ink-2)]">ballots</div>
@@ -95,10 +94,6 @@ export default async function AdminHistoryPage({ searchParams }: Props) {
                   <div className="rounded-2xl bg-white px-3 py-3">
                     <div className="font-bold text-[var(--ink-1)]">{runnerUp}</div>
                     <div className="text-[var(--ink-2)]">runner-up</div>
-                  </div>
-                  <div className="rounded-2xl bg-white px-3 py-3">
-                    <div className="font-bold text-[var(--ink-1)]">{averagePostWatch}</div>
-                    <div className="text-[var(--ink-2)]">avg rating</div>
                   </div>
                 </div>
 
@@ -124,6 +119,16 @@ export default async function AdminHistoryPage({ searchParams }: Props) {
                     </div>
                   </div>
                 )}
+
+                {night.status === "ARCHIVED" ? (
+                  <div className="mt-4">
+                    <DeleteArchivedNightForm
+                      action={deleteArchivedNightAction}
+                      nightId={night.id}
+                      nightTitle={night.title}
+                    />
+                  </div>
+                ) : null}
               </section>
             );
           }),
