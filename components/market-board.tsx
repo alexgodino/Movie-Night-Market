@@ -48,15 +48,6 @@ type Props = {
   initialData: Payload;
 };
 
-type MovementLabel =
-  | "Underdog Run"
-  | "Front Runner"
-  | "Holding Steady"
-  | "Slipping"
-  | "Quiet Climber"
-  | "Volatile"
-  | "Stuck";
-
 const scoreLayoutTransition = {
   type: "spring",
   stiffness: 130,
@@ -64,137 +55,9 @@ const scoreLayoutTransition = {
   mass: 1.05,
 } as const;
 
-function getMovementTone(label: MovementLabel) {
-  switch (label) {
-    case "Front Runner":
-      return "text-[var(--market-up)]";
-    case "Holding Steady":
-      return "text-[var(--ink-2)]";
-    case "Underdog Run":
-    case "Quiet Climber":
-      return "text-[#2a6b88]";
-    case "Slipping":
-      return "text-[var(--market-down)]";
-    case "Volatile":
-      return "text-[#8b5a1f]";
-    case "Stuck":
-      return "text-[var(--ink-2)]";
-  }
-}
-
-function getProfileTone(label: string) {
-  switch (label) {
-    case "Broad Support":
-      return "text-[var(--market-up)]";
-    case "Heavy Buzz":
-      return "text-[#9a3f86]";
-    case "Divisive":
-      return "text-[#8b5a1f]";
-    case "Cold Reception":
-      return "text-[var(--market-down)]";
-    case "Casual Interest":
-    default:
-      return "text-[var(--ink-2)]";
-  }
-}
-
-function getMovementLabel(entry: ResultEntry, currentRank: number, history: number[]) {
-  const openingRank = history[0] ?? entry.position;
-  const previousRank = history[history.length - 1];
-  const recentRanks = [...history.slice(-4), currentRank];
-  const directionChanges = recentRanks.reduce((count, rank, index, all) => {
-    if (index < 2) {
-      return count;
-    }
-
-    const prevDelta = all[index - 1] - all[index - 2];
-    const nextDelta = all[index] - all[index - 1];
-
-    if (prevDelta === 0 || nextDelta === 0) {
-      return count;
-    }
-
-    return Math.sign(prevDelta) !== Math.sign(nextDelta) ? count + 1 : count;
-  }, 0);
-
-  const netChange = openingRank - currentRank;
-  const movedUpThisRefresh =
-    previousRank !== undefined ? previousRank > currentRank : openingRank > currentRank;
-  const movedDownThisRefresh =
-    previousRank !== undefined ? previousRank < currentRank : openingRank < currentRank;
-  const improvingTrend =
-    recentRanks.length >= 3 && recentRanks.every((rank, index, all) => index === 0 || rank <= all[index - 1]);
-  const volatile = history.length >= 3 && directionChanges >= 2;
-  const nearTop = currentRank <= 2;
-  const nearBottom = currentRank >= 4;
-  const wasNearBottom = openingRank >= 4;
-
-  if (history.length === 0) {
-    if (currentRank === 1) {
-      return "Front Runner";
-    }
-
-    if (currentRank <= 3) {
-      return "Holding Steady";
-    }
-
-    return "Stuck";
-  }
-
-  if (nearBottom && previousRank !== undefined && previousRank >= 4 && netChange <= 0) {
-    return "Stuck";
-  }
-
-  if (volatile) {
-    return "Volatile";
-  }
-
-  if (currentRank === 1 && previousRank === 1) {
-    return "Holding Steady";
-  }
-
-  if (wasNearBottom && nearTop && netChange >= 3) {
-    return "Underdog Run";
-  }
-
-  if (wasNearBottom && currentRank <= 3 && netChange >= 2 && movedUpThisRefresh && improvingTrend) {
-    return "Quiet Climber";
-  }
-
-  if (movedDownThisRefresh && previousRank !== undefined && previousRank <= 3) {
-    return "Slipping";
-  }
-
-  if (previousRank === currentRank) {
-    return nearTop ? "Front Runner" : currentRank === 3 ? "Holding Steady" : "Stuck";
-  }
-
-  if (currentRank === 1) {
-    return "Front Runner";
-  }
-
-  if (movedUpThisRefresh) {
-    if (nearTop) {
-      return "Front Runner";
-    }
-
-    return currentRank === 3 && netChange >= 2 ? "Quiet Climber" : "Holding Steady";
-  }
-
-  return nearBottom ? "Stuck" : "Holding Steady";
-}
-
 export function MarketBoard({ initialData }: Props) {
   const [data, setData] = useState(initialData);
   const [scorePulseByOption, setScorePulseByOption] = useState<Record<string, "up" | "down">>({});
-  const [movementByOption, setMovementByOption] = useState<Record<string, MovementLabel>>(
-    Object.fromEntries(
-      initialData.results.map((entry, index) => [
-        entry.optionId,
-        getMovementLabel(entry, index + 1, []),
-      ]),
-    ) as Record<string, MovementLabel>,
-  );
   const rankHistoryRef = useRef<Record<string, number[]>>(
     Object.fromEntries(initialData.results.map((item) => [item.optionId, [] as number[]])),
   );
@@ -211,7 +74,6 @@ export function MarketBoard({ initialData }: Props) {
 
       const nextData = (await response.json()) as Payload;
       if (nextData.nightId === data.nightId) {
-        const nextMovement: Record<string, MovementLabel> = {};
         const nextPulse: Record<string, "up" | "down"> = {};
         const nextHistory: Record<string, number[]> = { ...rankHistoryRef.current };
 
@@ -219,8 +81,6 @@ export function MarketBoard({ initialData }: Props) {
           const currentRank = index + 1;
           const history = nextHistory[entry.optionId] ?? [];
           const previousRank = history[history.length - 1];
-
-          nextMovement[entry.optionId] = getMovementLabel(entry, currentRank, history);
 
           if (previousRank !== undefined) {
             if (previousRank > currentRank) {
@@ -234,7 +94,6 @@ export function MarketBoard({ initialData }: Props) {
         });
 
         rankHistoryRef.current = nextHistory;
-        setMovementByOption(nextMovement);
         setScorePulseByOption(nextPulse);
 
         if (scorePulseTimeoutRef.current !== null) {
@@ -268,6 +127,9 @@ export function MarketBoard({ initialData }: Props) {
   const winnerEntry = isRevealed
     ? data.results.find((result) => result.movieId === data.winnerMovieId)
     : null;
+  const standingsEntries = isRevealed && winnerEntry
+    ? data.results.filter((result) => result.movieId !== data.winnerMovieId)
+    : data.results;
 
   const isTied =
     isRevealed &&
@@ -331,16 +193,74 @@ export function MarketBoard({ initialData }: Props) {
         </div>
       )}
 
+      {winnerEntry ? (
+        <section className="section-card overflow-hidden rounded-[2rem] bg-emerald-50/70 p-5 shadow-[0_12px_40px_rgba(45,125,95,0.16)] ring-2 ring-[var(--market-up)] ring-offset-2">
+          <div className="flex items-center justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-100 px-4 py-2 text-sm font-bold text-[var(--market-up)]">
+              <Trophy className="size-4" />
+              Tonight&apos;s pick
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-5 md:grid-cols-[minmax(14rem,20rem)_minmax(0,1fr)] md:items-center">
+            <div className="mx-auto w-full max-w-[20rem]">
+              <MoviePoster
+                title={winnerEntry.title}
+                posterUrl={winnerEntry.posterUrl}
+                className="min-h-0 w-full rounded-[1.8rem]"
+                bare
+              />
+            </div>
+
+            <div className="min-w-0 text-center md:text-left">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+                Winner
+              </p>
+              <h2 className="headline mt-2 text-5xl leading-none text-[var(--ink-1)]">
+                {winnerEntry.title}
+              </h2>
+              {formatMovieMeta(winnerEntry.year, winnerEntry.runtimeMinutes) ? (
+                <p className="mt-3 text-base font-semibold text-[var(--ink-2)]">
+                  {formatMovieMeta(winnerEntry.year, winnerEntry.runtimeMinutes)}
+                </p>
+              ) : null}
+
+              <div className="mt-5 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+                <div className="rounded-2xl bg-white px-3 py-3">
+                  <div className="text-2xl font-bold text-[var(--ink-1)]">
+                    {winnerEntry.score.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-[var(--ink-2)]">score</div>
+                </div>
+                <div className="rounded-2xl bg-white px-3 py-3">
+                  <div className="text-2xl font-bold text-[var(--ink-1)]">
+                    {winnerEntry.robustAverage.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-[var(--ink-2)]">avg</div>
+                </div>
+                <div className="rounded-2xl bg-white px-3 py-3">
+                  <div className="text-2xl font-bold text-[var(--ink-1)]">
+                    {winnerEntry.voteCount}
+                  </div>
+                  <div className="text-sm text-[var(--ink-2)]">ballots</div>
+                </div>
+                <div className="rounded-2xl bg-white px-3 py-3">
+                  <div className="text-2xl font-bold text-[var(--ink-1)]">
+                    {winnerEntry.ratingCounts.five}
+                  </div>
+                  <div className="text-sm text-[var(--ink-2)]">5 star</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <LayoutGroup id="standings">
         <div className="space-y-4">
-          {data.results.map((entry, index) => {
-            const currentRank = index + 1;
-            const movementLabel = movementByOption[entry.optionId] ?? "Quiet Climber";
-            const movementTone = getMovementTone(movementLabel);
-            const profileTone = getProfileTone(entry.profileLabel);
+          {standingsEntries.map((entry, index) => {
+            const currentRank = winnerEntry ? index + 2 : index + 1;
             const pulse = scorePulseByOption[entry.optionId];
-            const isWinner = isRevealed && entry.movieId === data.winnerMovieId;
-            const isDimmed = isRevealed && !isWinner;
             const movieMeta = formatMovieMeta(entry.year, entry.runtimeMinutes);
 
             return (
@@ -349,40 +269,17 @@ export function MarketBoard({ initialData }: Props) {
                 layout
                 transition={scoreLayoutTransition}
                 className={clsx(
-                  "section-card rounded-[2rem] p-4 transition-[opacity,box-shadow,background-color] duration-500",
-                  isWinner && [
-                    "ring-2 ring-[var(--market-up)] ring-offset-2",
-                    "bg-emerald-50/60",
-                    "shadow-[0_0_0_4px_rgba(45,125,95,0.12),0_12px_40px_rgba(45,125,95,0.18)]",
-                  ],
-                  isDimmed && "opacity-60",
+                  "section-card rounded-[2rem] p-5 transition-[box-shadow,background-color] duration-500",
                 )}
               >
-                {isWinner ? (
-                  <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-sm font-bold text-[var(--market-up)]">
-                    <Trophy className="size-4" />
-                    Tonight&apos;s pick
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-[7.25rem_minmax(0,1fr)] gap-x-3 gap-y-3 sm:grid-cols-[8rem_minmax(0,1fr)] md:flex md:items-start md:gap-4">
-                  <div className="shrink-0 space-y-2 md:w-36">
+                <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-x-4 gap-y-3 sm:grid-cols-[9.5rem_minmax(0,1fr)] md:flex md:items-start md:gap-5">
+                  <div className="shrink-0 md:w-40">
                     <MoviePoster
                       title={entry.title}
                       posterUrl={entry.posterUrl}
                       className="w-full"
                       bare
                     />
-                    {entry.voteCount >= 2 ? (
-                      <div className="space-y-1 pl-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em]">
-                        <div className={clsx("leading-none", movementTone)}>{movementLabel}</div>
-                        <div className={clsx("leading-none", profileTone)}>{entry.profileLabel}</div>
-                      </div>
-                    ) : (
-                      <p className="pl-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-2)]">
-                        Waiting for votes
-                      </p>
-                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -410,9 +307,7 @@ export function MarketBoard({ initialData }: Props) {
                             ? "border-emerald-200 bg-emerald-50 text-[var(--market-up)]"
                             : pulse === "down"
                               ? "border-rose-200 bg-rose-50 text-[var(--market-down)]"
-                              : isWinner
-                                ? "border-transparent bg-[var(--market-up)] text-white"
-                                : "border-transparent bg-[var(--surface-4)] text-white",
+                              : "border-transparent bg-[var(--surface-4)] text-white",
                         )}
                       >
                         <div
@@ -434,7 +329,7 @@ export function MarketBoard({ initialData }: Props) {
                       </motion.div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-3 gap-1.5 text-center text-xs sm:gap-2 sm:text-sm">
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
                       <div className="rounded-xl bg-white px-2 py-2 sm:rounded-2xl sm:px-3 sm:py-3">
                         <div className="font-semibold text-[var(--ink-1)]">
                           {entry.robustAverage.toFixed(2)}

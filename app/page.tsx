@@ -33,12 +33,6 @@ export default async function HomePage() {
               />
             </div>
           ) : null}
-          <Link
-            href="/admin/login"
-            className="tap-button mt-6 inline-flex items-center justify-center bg-[var(--surface-4)] px-6 text-white"
-          >
-            Open admin tools
-          </Link>
         </section>
       </main>
     );

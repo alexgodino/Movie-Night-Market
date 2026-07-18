@@ -82,6 +82,11 @@ export default async function AdminHistoryPage({ searchParams }: Props) {
                   {night.status.replaceAll("_", " ").toLowerCase()}
                 </p>
                 <h2 className="headline mt-2 text-3xl">{night.title}</h2>
+                {night.notes ? (
+                  <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold leading-6 text-[var(--ink-2)]">
+                    {night.notes}
+                  </p>
+                ) : null}
                 <div className="mt-4 grid grid-cols-1 gap-3 text-center text-sm sm:grid-cols-3">
                   <div className="rounded-2xl bg-white px-3 py-3">
                     <div className="font-bold text-[var(--ink-1)]">{night.preWatchVotes.length}</div>

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { BarChart3, LogOut, Plus, Star } from "lucide-react";
 import {
   archiveNightAction,
-  closeVotingAction,
   logoutAdminAction,
+  overrideWinnerAction,
   revealWinnerAction,
 } from "@/lib/actions";
 import { requireAdmin } from "@/lib/auth";
@@ -69,12 +69,12 @@ export default async function AdminDashboardPage() {
                 {activeNight.status.replaceAll("_", " ").toLowerCase()}
               </strong>
             </p>
+            {activeNight.notes ? (
+              <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold leading-6 text-[var(--ink-2)]">
+                {activeNight.notes}
+              </p>
+            ) : null}
             <div className="mt-5 grid gap-3">
-              <form action={closeVotingAction}>
-                <button className="tap-button w-full border border-[var(--line)] bg-white text-[var(--ink-1)]">
-                  Close voting
-                </button>
-              </form>
               <form action={revealWinnerAction}>
                 <button className="tap-button w-full border border-[var(--line)] bg-white text-[var(--ink-1)]">
                   Reveal winner
@@ -87,6 +87,41 @@ export default async function AdminDashboardPage() {
               </form>
             </div>
           </section>
+
+          {activeNight.winnerMovieId ? (
+            <section className="section-card rounded-[2rem] p-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                Winner override
+              </p>
+              <h2 className="headline mt-2 text-2xl text-[var(--ink-1)]">Group chose something else?</h2>
+              <p className="mt-2 text-base leading-7 text-[var(--ink-2)]">
+                Use this only when the vote winner was revealed, but the room decides to watch a
+                different movie.
+              </p>
+              <form action={overrideWinnerAction} className="mt-4 space-y-3">
+                <label htmlFor="optionId" className="text-sm font-semibold text-[var(--ink-1)]">
+                  Actual movie watched
+                </label>
+                <select
+                  id="optionId"
+                  name="optionId"
+                  defaultValue={
+                    activeNight.options.find((option) => option.movieId === activeNight.winnerMovieId)?.id
+                  }
+                  className="min-h-12 w-full rounded-2xl border border-[var(--line)] bg-white px-4 text-base font-semibold text-[var(--ink-1)]"
+                >
+                  {activeNight.options.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.movie.title}
+                    </option>
+                  ))}
+                </select>
+                <button className="tap-button w-full border border-[var(--line)] bg-white text-[var(--ink-1)]">
+                  Save winner override
+                </button>
+              </form>
+            </section>
+          ) : null}
 
           {/* Debug scoring */}
           {results.length > 0 && (

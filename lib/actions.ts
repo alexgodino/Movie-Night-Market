@@ -250,42 +250,6 @@ export async function createMovieNightAction(
   redirect("/admin");
 }
 
-export async function openVotingAction() {
-  await requireAdmin();
-  const night = await getActiveNight();
-  if (!night) {
-    return;
-  }
-
-  await prisma.movieNight.update({
-    where: { id: night.id },
-    data: {
-      status: "VOTING_OPEN",
-      openedVotingAt: new Date(),
-    },
-  });
-
-  await refreshAll();
-}
-
-export async function closeVotingAction() {
-  await requireAdmin();
-  const night = await getActiveNight();
-  if (!night) {
-    return;
-  }
-
-  await prisma.movieNight.update({
-    where: { id: night.id },
-    data: {
-      status: "VOTING_CLOSED",
-      closedVotingAt: new Date(),
-    },
-  });
-
-  await refreshAll();
-}
-
 export async function revealWinnerAction() {
   await requireAdmin();
   const night = await getActiveNight();
@@ -346,7 +310,51 @@ export async function revealWinnerAction() {
         status: "WINNER_REVEALED",
         winnerMovieId: winner.movieId,
         runnerUpMovieId: getRunnerUpMovieId(results, winner.movieId),
+        closedVotingAt: night.closedVotingAt ?? new Date(),
         winnerRevealedAt: new Date(),
+      },
+    }),
+    ...scoreUpdates,
+  ]);
+
+  await refreshAll();
+}
+
+export async function overrideWinnerAction(formData: FormData) {
+  await requireAdmin();
+
+  const optionId = String(formData.get("optionId") ?? "");
+  const night = await getActiveNight();
+  if (!night?.winnerMovieId || !optionId) {
+    return;
+  }
+
+  const selectedOption = night.options.find((option) => option.id === optionId);
+  if (!selectedOption) {
+    return;
+  }
+
+  const results = await getResultsForNight(night);
+  const voteWinner = results[0] ?? null;
+  const selectedResult = results.find((result) => result.optionId === optionId);
+  const scoreUpdates = persistResultScores(results);
+  const note = voteWinner && voteWinner.movieId !== selectedOption.movieId
+    ? `Winner override: ${selectedResult?.title ?? selectedOption.movie.title} was selected after the vote winner was ${voteWinner.title}.`
+    : `Winner override confirmed: ${selectedResult?.title ?? selectedOption.movie.title}.`;
+
+  await prisma.$transaction([
+    prisma.movieNight.update({
+      where: { id: night.id },
+      data: {
+        status: "WINNER_REVEALED",
+        winnerMovieId: selectedOption.movieId,
+        runnerUpMovieId:
+          voteWinner && voteWinner.movieId !== selectedOption.movieId
+            ? voteWinner.movieId
+            : getRunnerUpMovieId(results, selectedOption.movieId),
+        closedVotingAt: night.closedVotingAt ?? new Date(),
+        winnerRevealedAt: night.winnerRevealedAt ?? new Date(),
+        notes: night.notes ? `${night.notes}\n${note}` : note,
       },
     }),
     ...scoreUpdates,

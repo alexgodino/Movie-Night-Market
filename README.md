@@ -131,7 +131,7 @@ Push to your GitHub branch and Render will rebuild and redeploy automatically. T
 - Default passcode: `popcorn`
 - Change it with `ADMIN_PASSCODE`
 
-Admin can create one active movie night at a time, enter exactly five movie options, paste poster URLs, upload poster images, close voting, reveal the winner, and archive the night.
+Admin can create one active movie night at a time, enter exactly five movie options, paste poster URLs, upload poster images, reveal the winner, override the winner when the group verbally chooses a different movie, and archive the night. Voting opens immediately when a night is created and closes automatically when the winner is revealed.
 
 ## Phone Testing
 
@@ -141,5 +141,6 @@ Before sharing broadly, test these on a real phone browser:
 2. Confirm voting is open immediately.
 3. Tap all five vote rating controls and submit.
 4. Confirm the same phone cannot vote twice.
-5. Reveal a winner.
-6. Archive the night and confirm the last winner poster appears on the idle home screen.
+5. Reveal a winner and confirm voting is closed.
+6. Override the winner from admin if the group chooses a different movie.
+7. Archive the night and confirm the last winner poster appears on the idle home screen.
